@@ -4,11 +4,11 @@ import { create } from 'zustand';
 const syncTheme = (theme) => {
   if (typeof document !== 'undefined') {
     if (theme === 'light') {
-      document.body.classList.add('light');
-      document.body.classList.remove('dark');
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
     } else {
-      document.body.classList.add('dark');
-      document.body.classList.remove('light');
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
     }
   }
   try {

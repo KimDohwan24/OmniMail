@@ -58,7 +58,7 @@
   }
 
   /* Dark Theme (Minimalist Dark / Charcoal aesthetics) */
-  body.dark {
+  :root.dark {
     --cursor-ink: #ececed;
     --cursor-body: #9a9a9f;
     --cursor-body-strong: #ececed;

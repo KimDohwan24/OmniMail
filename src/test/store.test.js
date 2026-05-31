@@ -3,8 +3,8 @@ import { useMailStore } from '../store';
 
 describe('Zustand store - Theme state tests', () => {
   beforeEach(() => {
-    // 테스트 전에 body 클래스 및 로컬스토리지 초기화
-    document.body.className = '';
+    // 테스트 전에 html(documentElement) 클래스 및 로컬스토리지 초기화
+    document.documentElement.className = '';
     localStorage.clear();
   });
 
@@ -30,20 +30,20 @@ describe('Zustand store - Theme state tests', () => {
     expect(useMailStore.getState().theme).toBe('dark');
   });
 
-  it('theme 상태에 따라 body 태그의 classList가 동기화되어야 한다용', () => {
+  it('theme 상태에 따라 document.documentElement의 classList가 동기화되어야 한다용', () => {
     const { toggleTheme } = useMailStore.getState();
     
-    // 테마가 'light'일 때 body에는 'light' 클래스가 있고 'dark' 클래스는 없어야 함
+    // 테마가 'light'일 때 html에는 'light' 클래스가 있고 'dark' 클래스는 없어야 함
     if (useMailStore.getState().theme === 'dark') {
       toggleTheme(); // -> light
     }
-    expect(document.body.classList.contains('light')).toBe(true);
-    expect(document.body.classList.contains('dark')).toBe(false);
+    expect(document.documentElement.classList.contains('light')).toBe(true);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
 
-    // 테마가 'dark'일 때 body에는 'dark' 클래스가 있고 'light' 클래스는 없어야 함
+    // 테마가 'dark'일 때 html에는 'dark' 클래스가 있고 'light' 클래스는 없어야 함
     toggleTheme(); // -> dark
-    expect(document.body.classList.contains('dark')).toBe(true);
-    expect(document.body.classList.contains('light')).toBe(false);
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(document.documentElement.classList.contains('light')).toBe(false);
   });
 
   it('테마 상태가 localStorage에 저장 및 로드되어야 한다용', () => {
