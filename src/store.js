@@ -10,6 +10,8 @@ const syncTheme = (theme) => {
       document.documentElement.classList.add('dark');
       document.documentElement.classList.remove('light');
     }
+    console.log('[OmniMail Theme Debug] Current Theme:', theme);
+    console.log('[OmniMail Theme Debug] HTML Classes:', document.documentElement.className);
   }
   try {
     localStorage.setItem('omnimail-theme', theme);

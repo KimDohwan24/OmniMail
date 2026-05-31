@@ -42,7 +42,7 @@
 
 @layer base {
   /* Default Light Theme (Cream & Soft aesthetics) */
-  :root {
+  html {
     --cursor-ink: #26251e;
     --cursor-body: #5a5852;
     --cursor-body-strong: #26251e;
@@ -58,7 +58,7 @@
   }
 
   /* Dark Theme (Minimalist Dark / Charcoal aesthetics) */
-  :root.dark {
+  html.dark {
     --cursor-ink: #ececed;
     --cursor-body: #9a9a9f;
     --cursor-body-strong: #ececed;
