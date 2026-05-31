@@ -1,3 +1,4 @@
+/* global chrome */
 // OmniMail Background Service Worker
 
 // Open dashboard in a new tab when clicking extension toolbar icon

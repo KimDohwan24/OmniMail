@@ -24,7 +24,7 @@ const syncTheme = (theme) => {
 const getInitialTheme = () => {
   try {
     return localStorage.getItem('omnimail-theme') || 'dark';
-  } catch (e) {
+  } catch {
     return 'dark';
   }
 };

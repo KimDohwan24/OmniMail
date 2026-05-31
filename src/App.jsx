@@ -1,26 +1,24 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mail, 
   Shield, 
   Settings, 
-  User, 
   BarChart2, 
   RefreshCw, 
   LogIn, 
   LogOut, 
   Sun, 
   Moon, 
-  CheckCircle, 
   Inbox,
   Lock,
-  ChevronRight,
   X
 } from 'lucide-react';
 import { useMailStore } from './store';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 dayjs.locale('ko');
+
 
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import './App.css';
