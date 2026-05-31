@@ -1,0 +1,41 @@
+name: OmniMail CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run ESLint
+      run: npm run lint
+
+    - name: Run Tests
+      run: npm run test -- --run
+
+    - name: Build Project
+      run: npm run build
+
+    # 빌드된 dist 디렉토리를 GitHub Artifact에 업로드하여 수동 로컬 로드 테스트를 가능하게 함
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OmniMail-dist
+        path: dist/
+        retention-days: 7

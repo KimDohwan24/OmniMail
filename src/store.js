@@ -1,5 +1,37 @@
 import { create } from 'zustand';
 
+// 테마를 body 태그 클래스 및 localStorage와 동기화하는 헬퍼 함수
+const syncTheme = (theme) => {
+  if (typeof document !== 'undefined') {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+    console.log('[OmniMail Theme Debug] Current Theme:', theme);
+    console.log('[OmniMail Theme Debug] HTML Classes:', document.documentElement.className);
+  }
+  try {
+    localStorage.setItem('omnimail-theme', theme);
+  } catch (e) {
+    console.error('Failed to save theme to localStorage:', e);
+  }
+};
+
+// 초기 테마 로드
+const getInitialTheme = () => {
+  try {
+    return localStorage.getItem('omnimail-theme') || 'dark';
+  } catch {
+    return 'dark';
+  }
+};
+
+const initialTheme = getInitialTheme();
+syncTheme(initialTheme);
+
 export const useMailStore = create((set) => ({
   // Accounts connection state
   accounts: [
@@ -8,7 +40,7 @@ export const useMailStore = create((set) => ({
   ],
   
   // Theme state: dark or light
-  theme: 'dark',
+  theme: initialTheme,
   
   // Actions
   connectAccount: (id, email) => set((state) => ({
@@ -25,12 +57,7 @@ export const useMailStore = create((set) => ({
   
   toggleTheme: () => set((state) => {
     const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
-    // Update body tag class
-    if (nextTheme === 'light') {
-      document.body.classList.add('light');
-    } else {
-      document.body.classList.remove('light');
-    }
+    syncTheme(nextTheme);
     return { theme: nextTheme };
   })
 }));

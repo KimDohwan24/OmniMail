@@ -34,4 +34,7 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
-plan
+plan/
+
+# Local troubleshooting logs for AI agents
+troubles/

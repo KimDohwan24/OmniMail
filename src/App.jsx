@@ -1,36 +1,37 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mail, 
   Shield, 
   Settings, 
-  User, 
   BarChart2, 
   RefreshCw, 
   LogIn, 
   LogOut, 
   Sun, 
   Moon, 
-  CheckCircle, 
   Inbox,
   Lock,
-  ChevronRight,
   X
 } from 'lucide-react';
 import { useMailStore } from './store';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
+dayjs.locale('ko');
+
+
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import './App.css';
 
 // Mock stats for chart
 const statsData = [
-  { name: 'Mon', emails: 14 },
-  { name: 'Tue', emails: 28 },
-  { name: 'Wed', emails: 19 },
-  { name: 'Thu', emails: 34 },
-  { name: 'Fri', emails: 23 },
-  { name: 'Sat', emails: 8 },
-  { name: 'Sun', emails: 12 },
+  { name: '월', emails: 14 },
+  { name: '화', emails: 28 },
+  { name: '수', emails: 19 },
+  { name: '목', emails: 34 },
+  { name: '금', emails: 23 },
+  { name: '토', emails: 8 },
+  { name: '일', emails: 12 },
 ];
 
 function App() {
@@ -60,28 +61,28 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden font-sans">
+    <div className="flex h-screen w-screen overflow-hidden font-sans text-cursor-body bg-cursor-canvas">
       
       {/* 1. Slim Left Control bar (64px) */}
-      <aside className="w-16 flex flex-col items-center py-6 justify-between border-r border-white/5 bg-black/30 backdrop-blur-md">
+      <aside className="w-16 flex flex-col items-center py-6 justify-between border-r border-cursor-hairline bg-cursor-canvas-soft">
         <div className="flex flex-col items-center gap-6">
           {/* Logo icon */}
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-purple to-brand-cyan flex items-center justify-center shadow-lg shadow-brand-purple/20">
+          <div className="w-10 h-10 rounded-xl bg-cursor-primary flex items-center justify-center">
             <Mail className="text-white" size={20} />
           </div>
           
-          <div className="h-px w-8 bg-white/10" />
+          <div className="h-px w-8 bg-cursor-hairline" />
 
           {/* Navigation Items */}
           <button 
             onClick={() => setActiveTab('overview')}
-            className={`p-3 rounded-xl transition-all duration-200 ${activeTab === 'overview' ? 'bg-white/10 text-brand-cyan' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            className={`p-3 rounded-xl transition-all duration-200 ${activeTab === 'overview' ? 'bg-cursor-surface-strong text-cursor-primary' : 'text-cursor-muted hover:text-cursor-ink hover:bg-cursor-canvas'}`}
           >
             <Inbox size={20} />
           </button>
           <button 
             onClick={() => setActiveTab('analytics')}
-            className={`p-3 rounded-xl transition-all duration-200 ${activeTab === 'analytics' ? 'bg-white/10 text-brand-purple' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+            className={`p-3 rounded-xl transition-all duration-200 ${activeTab === 'analytics' ? 'bg-cursor-surface-strong text-cursor-primary' : 'text-cursor-muted hover:text-cursor-ink hover:bg-cursor-canvas'}`}
           >
             <BarChart2 size={20} />
           </button>
@@ -91,11 +92,11 @@ function App() {
           {/* Theme switcher */}
           <button 
             onClick={toggleTheme}
-            className="p-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200"
+            className="p-3 rounded-xl text-cursor-muted hover:text-cursor-ink hover:bg-cursor-canvas transition-all duration-200"
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <button className="p-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+          <button className="p-3 rounded-xl text-cursor-muted hover:text-cursor-ink hover:bg-cursor-canvas transition-all">
             <Settings size={20} />
           </button>
         </div>
@@ -105,26 +106,26 @@ function App() {
       <main className="flex-1 flex flex-col overflow-hidden">
         
         {/* Header bar */}
-        <header className="h-16 px-8 flex items-center justify-between border-b border-white/5 bg-black/10 backdrop-blur-sm">
+        <header className="h-16 px-8 flex items-center justify-between border-b border-cursor-hairline bg-cursor-canvas">
           <div className="flex flex-col">
-            <h1 className="text-lg font-semibold tracking-wide">
-              {theme === 'dark' ? 'OmniMail Space' : 'OmniMail Space'}
+            <h1 className="text-lg font-semibold tracking-wide text-cursor-ink">
+              OmniMail 통합 메일함
             </h1>
-            <span className="text-xs text-gray-400">
-              {dayjs().format('dddd, MMMM DD, YYYY')}
+            <span className="text-xs text-cursor-muted">
+              {dayjs().format('YYYY년 MM월 DD일 dddd')}
             </span>
           </div>
 
           <div className="flex items-center gap-4">
             <button 
               onClick={handleRefresh}
-              className={`p-2 text-gray-400 hover:text-white transition-all rounded-lg hover:bg-white/5 ${isRefreshing ? 'animate-spin text-brand-cyan' : ''}`}
+              className={`p-2 text-cursor-muted hover:text-cursor-ink transition-all rounded-lg hover:bg-cursor-canvas-soft ${isRefreshing ? 'animate-spin text-cursor-primary' : ''}`}
             >
               <RefreshCw size={18} />
             </button>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs font-medium">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cursor-surface-strong/50 border border-cursor-hairline text-xs font-medium text-cursor-ink">
               <span className="w-2 h-2 rounded-full bg-brand-naver animate-pulse" />
-              Naver Sync Active
+              네이버 실시간 동기화 중
             </div>
           </div>
         </header>
@@ -135,14 +136,14 @@ function App() {
             
             {/* Left Col: Account manager & Connection states */}
             <div className="md:col-span-1 flex flex-col gap-6">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">Mailbox Providers</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-cursor-muted">이메일 계정 연동</h2>
               
               <div className="flex flex-col gap-4">
                 {accounts.map(acc => (
                   <motion.div 
                     key={acc.id}
                     layout
-                    className="p-5 rounded-2xl border border-white/5 bg-brand-card backdrop-blur-md flex flex-col gap-4 shadow-xl"
+                    className="p-5 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex flex-col gap-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -150,9 +151,9 @@ function App() {
                           {acc.name.charAt(0)}
                         </div>
                         <div>
-                          <h3 className="font-medium text-sm text-white">{acc.name}</h3>
-                          <p className="text-xs text-gray-400">
-                            {acc.connected ? '🟢 Connected' : '🔴 Disconnected'}
+                          <h3 className="font-medium text-sm text-cursor-ink">{acc.name}</h3>
+                          <p className="text-xs text-cursor-muted">
+                            {acc.connected ? '🟢 연동 완료' : '🔴 연동 필요'}
                           </p>
                         </div>
                       </div>
@@ -160,14 +161,14 @@ function App() {
                       {acc.connected ? (
                         <button 
                           onClick={() => disconnectAccount(acc.id)}
-                          className="p-2 text-gray-400 hover:text-red-400 rounded-lg hover:bg-white/5 transition-all"
+                          className="p-2 text-cursor-muted hover:text-cursor-primary rounded-lg hover:bg-cursor-canvas-soft transition-all"
                         >
                           <LogOut size={16} />
                         </button>
                       ) : (
                         <button 
                           onClick={() => startConnection(acc.id)}
-                          className="p-2 text-brand-cyan hover:bg-white/5 rounded-lg transition-all"
+                          className="p-2 text-cursor-primary hover:bg-cursor-canvas-soft rounded-lg transition-all"
                         >
                           <LogIn size={16} />
                         </button>
@@ -175,7 +176,7 @@ function App() {
                     </div>
 
                     {acc.connected && (
-                      <div className="text-xs py-1.5 px-3 rounded-lg bg-black/20 text-gray-300 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                      <div className="text-xs py-1.5 px-3 rounded-lg bg-cursor-canvas-soft text-cursor-body font-mono overflow-hidden text-ellipsis whitespace-nowrap border border-cursor-hairline-soft">
                         {acc.email}
                       </div>
                     )}
@@ -184,14 +185,14 @@ function App() {
               </div>
 
               {/* Security Shield Card */}
-              <div className="p-5 rounded-2xl border border-white/5 bg-brand-card backdrop-blur-md flex items-start gap-4">
-                <div className="p-3 bg-brand-purple/10 text-brand-purple rounded-xl">
+              <div className="p-5 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex items-start gap-4">
+                <div className="p-3 bg-cursor-primary/10 text-cursor-primary rounded-xl">
                   <Shield size={20} />
                 </div>
-                <div>
-                  <h4 className="text-sm font-medium text-white">Browser Sandbox</h4>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                    Credentials are read using active Chrome session cookies. Your email password is never stored or processed.
+                <div className="keep-all">
+                  <h4 className="text-sm font-medium text-cursor-ink">안전한 로컬 샌드박스</h4>
+                  <p className="text-xs text-cursor-muted mt-1 leading-relaxed">
+                    사용자 인증 정보는 크롬 브라우저의 활성화된 로그인 세션 쿠키를 통해 안전하게 연동됩니다. 이메일 비밀번호는 시스템에 절대 저장되거나 외부로 전송되지 않습니다.
                   </p>
                 </div>
               </div>
@@ -207,13 +208,13 @@ function App() {
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
-                    className="p-8 rounded-3xl border border-white/5 bg-brand-card backdrop-blur-md shadow-2xl flex flex-col gap-6"
+                    className="p-8 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex flex-col gap-6"
                   >
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-medium text-white">Connect {accounts.find(a => a.id === connectingId)?.name}</h2>
+                      <h2 className="text-lg font-medium text-cursor-ink">{accounts.find(a => a.id === connectingId)?.name} 계정 연결</h2>
                       <button 
                         onClick={() => setConnectingId(null)}
-                        className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-all"
+                        className="p-2 text-cursor-muted hover:text-cursor-ink rounded-lg hover:bg-cursor-canvas-soft transition-all"
                       >
                         <X size={18} />
                       </button>
@@ -221,21 +222,21 @@ function App() {
 
                     <form onSubmit={submitConnection} className="flex flex-col gap-4">
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">Email Address</label>
+                        <label className="text-xs text-cursor-muted font-medium uppercase tracking-wider">이메일 주소</label>
                         <input 
                           type="email" 
                           required
-                          className="px-4 py-3 rounded-xl bg-black/40 border border-white/5 focus:border-brand-purple/50 text-sm text-white focus:outline-none transition-all"
-                          placeholder="your.email@domain.com"
+                          className="px-4 py-3 rounded-lg bg-cursor-canvas-soft border border-cursor-hairline focus:border-cursor-primary/50 text-sm text-cursor-ink focus:outline-none transition-all"
+                          placeholder={connectingId === 'naver' ? 'example@naver.com' : 'example@gmail.com'}
                           value={inputEmail}
                           onChange={(e) => setInputEmail(e.target.value)}
                         />
                       </div>
 
-                      <div className="p-4 rounded-xl bg-black/20 text-xs text-gray-400 flex items-start gap-3">
-                        <Lock size={16} className="text-brand-purple shrink-0 mt-0.5" />
+                      <div className="p-4 rounded-lg bg-cursor-canvas-soft border border-cursor-hairline-soft text-xs text-cursor-muted flex items-start gap-3 keep-all">
+                        <Lock size={16} className="text-cursor-primary shrink-0 mt-0.5" />
                         <span>
-                          For security, please ensure you are already logged in to the email provider in another browser tab.
+                          보안 및 원활한 연동을 위해, 브라우저의 다른 탭에서 해당 이메일 서비스(네이버 또는 구글)에 로그인되어 있는지 확인해 주세요.
                         </span>
                       </div>
 
@@ -243,15 +244,15 @@ function App() {
                         <button 
                           type="button"
                           onClick={() => setConnectingId(null)}
-                          className="px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-sm font-medium transition-all"
+                          className="px-5 py-2.5 rounded-lg border border-cursor-hairline-strong hover:bg-cursor-canvas-soft text-sm font-medium text-cursor-ink transition-all shrink-0 whitespace-nowrap"
                         >
-                          Cancel
+                          취소
                         </button>
                         <button 
                           type="submit"
-                          className="px-5 py-2.5 rounded-xl bg-brand-purple hover:bg-brand-purple-hover text-white text-sm font-medium transition-all shadow-lg shadow-brand-purple/25"
+                          className="px-5 py-2.5 rounded-lg bg-cursor-primary hover:bg-cursor-primary-active text-white text-sm font-medium transition-all shrink-0 whitespace-nowrap"
                         >
-                          Verify & Sync
+                          인증 및 동기화
                         </button>
                       </div>
                     </form>
@@ -266,22 +267,20 @@ function App() {
                     className="flex flex-col gap-8"
                   >
                     {/* Welcome Banner */}
-                    <div className="p-8 rounded-3xl border border-white/5 bg-gradient-to-tr from-brand-purple/20 via-transparent to-brand-cyan/10 relative overflow-hidden">
-                      <div className="relative z-10">
-                        <h2 className="text-2xl font-bold tracking-tight text-white mb-2">Welcome to OmniMail Dashboard</h2>
-                        <p className="text-sm text-gray-300 max-w-md leading-relaxed">
-                          Your email management space is ready. Connect Naver and Gmail in the sidebar to sync your incoming mails.
+                    <div className="p-8 rounded-xl border border-cursor-hairline bg-cursor-canvas-soft relative overflow-hidden">
+                      <div className="relative z-10 keep-all">
+                        <h2 className="text-2xl font-semibold tracking-tight text-cursor-ink mb-2">OmniMail 통합 메일 대시보드</h2>
+                        <p className="text-sm text-cursor-body max-w-md leading-relaxed">
+                          이메일 통합 관리 공간이 준비되었습니다. 사이드바에서 네이버와 Gmail을 연동하여 수신 메일을 실시간으로 확인해 보세요.
                         </p>
                       </div>
-                      {/* Decorative elements */}
-                      <div className="absolute right-0 bottom-0 w-32 h-32 bg-brand-cyan/20 blur-3xl rounded-full" />
                     </div>
 
                     {/* Stats Chart Card */}
-                    <div className="p-6 rounded-3xl border border-white/5 bg-brand-card backdrop-blur-md shadow-xl flex flex-col gap-4">
-                      <div>
-                        <h3 className="text-sm font-semibold tracking-wider text-gray-400 uppercase">Mail Flow Overview</h3>
-                        <p className="text-xs text-gray-500">Weekly email delivery stats (Mock data visualization)</p>
+                    <div className="p-6 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex flex-col gap-4">
+                      <div className="keep-all">
+                        <h3 className="text-xs font-semibold tracking-wider text-cursor-muted uppercase">이메일 수신 흐름 개요</h3>
+                        <p className="text-xs text-cursor-muted-soft">주간 이메일 유입 추이 (테스트 데이터)</p>
                       </div>
                       
                       <div className="h-48 w-100 mt-2">
@@ -289,14 +288,14 @@ function App() {
                           <AreaChart data={statsData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorEmails" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
-                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#f54e00" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="#f54e00" stopOpacity={0}/>
                               </linearGradient>
                             </defs>
-                            <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ backgroundColor: '#111322', borderColor: 'rgba(255,255,255,0.05)', borderRadius: '12px' }} />
-                            <Area type="monotone" dataKey="emails" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorEmails)" />
+                            <XAxis dataKey="name" stroke="#807d72" fontSize={11} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#807d72" fontSize={11} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e6e5e0', borderRadius: '8px', color: '#26251e' }} />
+                            <Area type="monotone" dataKey="emails" stroke="#f54e00" strokeWidth={2} fillOpacity={1} fill="url(#colorEmails)" />
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>

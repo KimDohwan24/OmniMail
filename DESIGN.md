@@ -1,66 +1,537 @@
-# 디자인 규격 정의서: OmniMail Dashboard
+---
+version: alpha
+name: Cursor-design-analysis
+description: An AI-first code editor whose marketing site reads like a quietly-confident developer-tools brand with a warm-cream editorial canvas (`#f7f7f4`) instead of the typical dark IDE atmosphere. Near-black warm ink (`#26251e`) carries body and display alike — display sits at weight 400 with negative letter-spacing for a magazine feel rather than a bold tech voice. The single brand voltage is **Cursor Orange** (`#f54e00`) reserved for primary CTAs and the wordmark. A signature pastel timeline palette (peach, mint, blue, lavender, gold) marks AI-action stages (Thinking / Reading / Editing / Grepping / Done) — only inside in-product timeline visualizations. Cards use minimal hairlines, no shadows, generous 80px section rhythm. CursorGothic for display/body, JetBrains Mono on every code surface (which is roughly half the page).
 
-이 문서는 **OmniMail 대시보드**의 인터페이스 일관성을 유지하기 위해 수립된 디자인 토큰, 시각적 규칙, 레이아웃 그리드 및 애니메이션 수치를 상세히 정의합니다.
+colors:
+  primary: "#f54e00"
+  primary-active: "#d04200"
+  ink: "#26251e"
+  body: "#5a5852"
+  body-strong: "#26251e"
+  muted: "#807d72"
+  muted-soft: "#a09c92"
+  hairline: "#e6e5e0"
+  hairline-soft: "#efeee8"
+  hairline-strong: "#cfcdc4"
+  canvas: "#f7f7f4"
+  canvas-soft: "#fafaf7"
+  surface-card: "#ffffff"
+  surface-strong: "#e6e5e0"
+  on-primary: "#ffffff"
+  timeline-thinking: "#dfa88f"
+  timeline-grep: "#9fc9a2"
+  timeline-read: "#9fbbe0"
+  timeline-edit: "#c0a8dd"
+  timeline-done: "#c08532"
+  semantic-error: "#cf2d56"
+  semantic-success: "#1f8a65"
 
+typography:
+  display-mega:
+    fontFamily: "'CursorGothic', system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+    fontSize: 72px
+    fontWeight: 400
+    lineHeight: 1.1
+    letterSpacing: -2.16px
+  display-lg:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 36px
+    fontWeight: 400
+    lineHeight: 1.2
+    letterSpacing: -0.72px
+  display-md:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 26px
+    fontWeight: 400
+    lineHeight: 1.25
+    letterSpacing: -0.325px
+  display-sm:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 22px
+    fontWeight: 400
+    lineHeight: 1.3
+    letterSpacing: -0.11px
+  title-md:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 18px
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: 0
+  title-sm:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 16px
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: 0
+  body-md:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: 0
+  body-tracked:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: 0.08px
+  body-sm:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 14px
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: 0
+  caption:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 1.4
+    letterSpacing: 0
+  caption-uppercase:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 11px
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: 0.88px
+    textTransform: uppercase
+  code:
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 1.5
+    letterSpacing: 0
+  button:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 14px
+    fontWeight: 500
+    lineHeight: 1.0
+    letterSpacing: 0
+  nav-link:
+    fontFamily: "'CursorGothic', sans-serif"
+    fontSize: 14px
+    fontWeight: 500
+    lineHeight: 1.4
+    letterSpacing: 0
+
+rounded:
+  none: 0px
+  xs: 4px
+  sm: 6px
+  md: 8px
+  lg: 12px
+  xl: 16px
+  pill: 9999px
+  full: 9999px
+
+spacing:
+  xxs: 4px
+  xs: 8px
+  sm: 12px
+  base: 16px
+  md: 20px
+  lg: 24px
+  xl: 32px
+  xxl: 48px
+  section: 80px
+
+components:
+  top-nav:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.nav-link}"
+    height: 64px
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.button}"
+    rounded: "{rounded.md}"
+    padding: 10px 18px
+    height: 40px
+  button-primary-active:
+    backgroundColor: "{colors.primary-active}"
+    textColor: "{colors.on-primary}"
+    rounded: "{rounded.md}"
+  button-secondary:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.button}"
+    rounded: "{rounded.md}"
+    padding: 9px 17px
+    height: 40px
+  button-tertiary-text:
+    backgroundColor: transparent
+    textColor: "{colors.ink}"
+    typography: "{typography.button}"
+  button-download:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.canvas}"
+    typography: "{typography.button}"
+    rounded: "{rounded.md}"
+    padding: 12px 20px
+    height: 44px
+  hero-band:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.display-mega}"
+    padding: 80px
+  ide-mockup-card:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: 0
+  ide-pane:
+    backgroundColor: "{colors.canvas-soft}"
+    textColor: "{colors.body}"
+    typography: "{typography.code}"
+    rounded: "{rounded.md}"
+    padding: 16px
+  feature-card:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.title-md}"
+    rounded: "{rounded.lg}"
+    padding: 24px
+  comparison-card:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.lg}"
+    padding: 24px
+  timeline-pill-thinking:
+    backgroundColor: "{colors.timeline-thinking}"
+    textColor: "{colors.ink}"
+    typography: "{typography.caption-uppercase}"
+    rounded: "{rounded.pill}"
+    padding: 4px 10px
+  timeline-pill-grep:
+    backgroundColor: "{colors.timeline-grep}"
+    textColor: "{colors.ink}"
+    typography: "{typography.caption-uppercase}"
+    rounded: "{rounded.pill}"
+    padding: 4px 10px
+  timeline-pill-read:
+    backgroundColor: "{colors.timeline-read}"
+    textColor: "{colors.ink}"
+    typography: "{typography.caption-uppercase}"
+    rounded: "{rounded.pill}"
+    padding: 4px 10px
+  timeline-pill-edit:
+    backgroundColor: "{colors.timeline-edit}"
+    textColor: "{colors.ink}"
+    typography: "{typography.caption-uppercase}"
+    rounded: "{rounded.pill}"
+    padding: 4px 10px
+  timeline-pill-done:
+    backgroundColor: "{colors.timeline-done}"
+    textColor: "{colors.on-primary}"
+    typography: "{typography.caption-uppercase}"
+    rounded: "{rounded.pill}"
+    padding: 4px 10px
+  code-block:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.code}"
+    rounded: "{rounded.lg}"
+    padding: 20px
+  pricing-tier-card:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.lg}"
+    padding: 32px
+  pricing-tier-featured:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.canvas}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.lg}"
+    padding: 32px
+  text-input:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.md}"
+    padding: 12px 16px
+    height: 44px
+  badge-pill:
+    backgroundColor: "{colors.surface-strong}"
+    textColor: "{colors.ink}"
+    typography: "{typography.caption-uppercase}"
+    rounded: "{rounded.pill}"
+    padding: 4px 10px
+  cta-band:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
+    typography: "{typography.display-lg}"
+    padding: 96px
+  testimonial-card:
+    backgroundColor: "{colors.surface-card}"
+    textColor: "{colors.body}"
+    typography: "{typography.body-md}"
+    rounded: "{rounded.lg}"
+    padding: 24px
+  footer:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.body}"
+    typography: "{typography.body-sm}"
+    padding: 64px 48px
+  footer-link:
+    backgroundColor: transparent
+    textColor: "{colors.body}"
+    typography: "{typography.body-sm}"
 ---
 
-## 🎨 1. 테마 및 색상 규격 (CSS 변수)
+## Overview
 
-OmniMail은 **다크 미니멀리즘 및 글래스모피즘(Glassmorphic)** 테마를 기본으로 사용하며, 깔끔한 **라이트 모드** 테마 스위칭을 지원합니다.
+Cursor's marketing site reads as a quietly-confident developer brand that believes in editorial calm over IDE-darkness. The base canvas is **warm cream** (`{colors.canvas}` — #f7f7f4) holding warm near-black ink (`{colors.ink}` — #26251e) for body and display alike. The single brand voltage is **Cursor Orange** (`{colors.primary}` — #f54e00) reserved for primary CTAs and the wordmark — used scarcely.
 
-| CSS 커스텀 속성명 | 다크 모드 지정 값 | 라이트 모드 지정 값 | 주요 용도 |
-| :--- | :--- | :--- | :--- |
-| `--color-brand-bg` | `#0b0d16` (깊은 심해색) | `#f4f5f8` (밝은 그레이) | 전체 화면 배경색 |
-| `--color-brand-card` | `rgba(20, 24, 45, 0.65)` | `rgba(255, 255, 255, 0.75)` | 반투명 유리 카드, 사이드바 배경 |
-| `--color-brand-purple` | `#8b5cf6` (일렉트릭 퍼플) | `#7c3aed` | 메인 강조색, 주요 버튼 |
-| `--color-brand-cyan` | `#06b6d4` (오션 시안) | `#0891b2` | 서브 강조색, 연결 상태 알림 |
-| `--color-brand-gmail` | `#ef4444` (코랄 레드) | `#ef4444` | Gmail 계정 배지 태그 |
-| `--color-brand-naver` | `#10b981` (에메랄드 그린) | `#10b981` | 네이버 계정 배지 태그 |
+Type runs **CursorGothic** as the single sans family. Display sits at weight 400 with negative letter-spacing — a magazine-editorial voice rather than tech-bombastic. JetBrains Mono carries every code surface (and code surfaces are roughly half the page).
 
----
+The brand's strongest visual signature is the **AI-timeline pill palette**: five pastel pills (peach `{colors.timeline-thinking}`, mint `{colors.timeline-grep}`, blue `{colors.timeline-read}`, lavender `{colors.timeline-edit}`, gold `{colors.timeline-done}`) marking AI-action stages inside in-product timeline visualizations. Used only in product UI — never as system action colors.
 
-## 🪟 2. 글래스모피즘 (Glassmorphism) 설계 기준
+**Key Characteristics:**
+- Warm cream canvas, not white. Ink is warm (#26251e), not pure black.
+- Single CTA color: `{colors.primary}` (Cursor Orange #f54e00). Used scarcely.
+- Display weight stays at 400 — never bold. Magazine voice.
+- AI timeline pastels: 5 dedicated tokens for in-product agent action stages.
+- Compact 8px CTA radius — developer dialect.
+- Hairline-only depth; no drop shadows.
+- 80px section rhythm.
 
-고급스러운 아크릴 유리 질감을 재현하기 위해 다음 3대 효과를 엄격히 적용합니다:
-* **백드롭 블러 (Background Blur):** 모든 글래스 영역에 `backdrop-filter: blur(16px);` 속성과 함께 불투명도가 낮춰진 `--color-brand-card` 배경을 조합합니다.
-* **얇은 광택 보더 (Border):** 유리 카드 테두리를 분리해 주는 은은한 테두리를 선언합니다: `1px solid rgba(255, 255, 255, 0.05)` (라이트 모드 시 투명 그레이 적용).
-* **소프트 그림자 (Shadows):** 유리 카드에 붕 떠 있는 듯한 깊이감을 부여하기 위해 매우 흐리고 은은한 대형 그림자를 적용합니다: `box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3)`.
+## Colors
 
----
+### Brand & Accent
+- **Cursor Orange** (`{colors.primary}` — #f54e00): Primary CTA pills, wordmark, hero accent. Used scarcely.
+- **Cursor Orange Active** (`{colors.primary-active}` — #d04200): Press state.
 
-## 📐 3. 레이아웃 그리드 구조 (3-Column Grid)
+### Surface
+- **Canvas** (`{colors.canvas}` — #f7f7f4): Warm cream page floor.
+- **Canvas Soft** (`{colors.canvas-soft}` — #fafaf7): IDE-pane background inside mockups.
+- **Surface Card** (`{colors.surface-card}` — #ffffff): Pure white card surface — slight contrast against the cream canvas.
+- **Surface Strong** (`{colors.surface-strong}` — #e6e5e0): Badges, tag pills.
 
-화면 전체 폭을 가로 기준 3개의 영역으로 분할하여 일률적으로 통제합니다:
-1. **글로벌 메뉴 바 (폭 64px 고정):** 최측면 툴바. 설정, 탭 이동 및 테마 토글 버튼 탑재.
-2. **계정 & 라벨 트리 패널 (폭 260px 고정):** 중간 사이드바. 슬랙 아코디언 형태로 연동된 메일함 목록 및 필터링된 중요/일반 채널을 한눈에 노출.
-3. **메인 메일 피드 영역 (남은 폭 전체 차지):** 
-   * 중앙에 분류된 이메일 카드 리스트가 흐릅니다.
-   * **우측 슬라이드 오버 본문 패널 (전체 화면 폭의 55% 점유):** 메일 목록에서 특정 항목을 터치하는 즉시 우측에서 밀려 나오는 2단 분할 본문 뷰어.
+### Hairlines
+- **Hairline** (`{colors.hairline}` — #e6e5e0): 1px divider.
+- **Hairline Soft** (`{colors.hairline-soft}` — #efeee8): Lighter divider.
+- **Hairline Strong** (`{colors.hairline-strong}` — #cfcdc4): Stronger panel outline.
 
----
+### Text
+- **Ink** (`{colors.ink}` — #26251e): Display, body emphasis. Warm near-black.
+- **Body** (`{colors.body}` — #5a5852): Default running-text.
+- **Body Strong** (`{colors.body-strong}` — #26251e): Same as ink.
+- **Muted** (`{colors.muted}` — #807d72): Sub-titles.
+- **Muted Soft** (`{colors.muted-soft}` — #a09c92): Disabled text.
+- **On Primary** (`{colors.on-primary}` — #ffffff): White text on Cursor Orange.
 
-## 🎬 4. 마이크로 애니메이션 및 물리 엔진 제어 값
+### Timeline (AI-action signature)
+- **Thinking** (`{colors.timeline-thinking}` — #dfa88f): Peach. Used inside in-product agent timeline only.
+- **Grep** (`{colors.timeline-grep}` — #9fc9a2): Mint.
+- **Read** (`{colors.timeline-read}` — #9fbbe0): Pastel blue.
+- **Edit** (`{colors.timeline-edit}` — #c0a8dd): Lavender.
+- **Done** (`{colors.timeline-done}` — #c08532): Warm gold.
 
-화면 조작 시 부드럽고 완성도 높은 모션을 연출하기 위한 Framer Motion 설정값 가이드라인입니다.
+### Semantic
+- **Success** (`{colors.semantic-success}` — #1f8a65): Confirmation indicators.
+- **Error** (`{colors.semantic-error}` — #cf2d56): Validation errors.
 
-### A. 우측 슬라이드 오버 (Slide-over) 본문 패널
-* **트랜지션 방식:** 튕김 효과가 가미된 스프링(Spring) 물리 모델 사용.
-* **Framer Motion 추천 설정:**
-  ```javascript
-  const drawerTransition = {
-    type: 'spring',
-    damping: 25, // 튕김을 억제하는 감쇠율
-    stiffness: 180, // 스프링의 강도
-  };
-  ```
-* **동작 범위:** 열릴 때 `x: "100%"` 에서 `x: 0`으로, 닫힐 때 다시 `x: "100%"`로 복귀하는 연출.
+## Typography
 
-### B. 리스트 항목 진입 & 토스트 알림
-* **트랜지션 방식:** 부드러운 페이드 인과 미세한 스케일 업 결합.
-  * 시작 지점: `opacity: 0, scale: 0.95`
-  * 완료 지점: `opacity: 1, scale: 1`
-  * 트랜지션 시간: `0.2s` (Ease out 제어)
+### Font Family
+**CursorGothic** is the licensed display + body family. Fallback: `system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif`. Code surfaces switch to **JetBrains Mono**.
 
-### C. 호버 피드백 및 클릭 인터랙션
-* **메일 카드 호버:** 마우스가 올라가면 테두리에 보라색/시안색 빛(Glow)이 돌면서 부드럽게 위로 `2px` 떠오릅니다.
-* **버튼 터치:** 클릭하는 순간 살짝 찌그러지는 모션 효과를 줍니다: `whileTap={{ scale: 0.97 }}`.
+### Hierarchy
+
+| Token | Size | Weight | Line Height | Letter Spacing | Use |
+|---|---|---|---|---|---|
+| `{typography.display-mega}` | 72px | 400 | 1.1 | -2.16px | Homepage hero h1 |
+| `{typography.display-lg}` | 36px | 400 | 1.2 | -0.72px | Section heads |
+| `{typography.display-md}` | 26px | 400 | 1.25 | -0.325px | Sub-section heads |
+| `{typography.display-sm}` | 22px | 400 | 1.3 | -0.11px | Card group titles |
+| `{typography.title-md}` | 18px | 600 | 1.4 | 0 | Component titles |
+| `{typography.title-sm}` | 16px | 600 | 1.4 | 0 | List labels |
+| `{typography.body-md}` | 16px | 400 | 1.5 | 0 | Default body |
+| `{typography.body-tracked}` | 16px | 400 | 1.5 | 0.08px | Tracked editorial body |
+| `{typography.body-sm}` | 14px | 400 | 1.5 | 0 | Footer body |
+| `{typography.caption}` | 13px | 400 | 1.4 | 0 | Photo captions |
+| `{typography.caption-uppercase}` | 11px | 600 | 1.4 | 0.88px | Section labels, timeline pill labels |
+| `{typography.code}` | 13px | 400 | 1.5 | 0 | Code blocks — JetBrains Mono |
+| `{typography.button}` | 14px | 500 | 1.0 | 0 | CTA pill labels |
+| `{typography.nav-link}` | 14px | 500 | 1.4 | 0 | Top-nav menu |
+
+### Principles
+- **Display weight stays at 400.** Magazine voice, never bold.
+- **Negative letter-spacing on display only.** -0.11px to -2.16px tracking.
+- **JetBrains Mono on every code surface.**
+
+### Note on Font Substitutes
+CursorGothic is licensed. Open-source substitute: **Inter** at weight 400 with letter-spacing -1.5%. Or **GT Sectra** for a more editorial feel.
+
+## Layout
+
+### Spacing System
+- **Base unit:** 4px.
+- **Tokens:** `{spacing.xxs}` 4px · `{spacing.xs}` 8px · `{spacing.sm}` 12px · `{spacing.base}` 16px · `{spacing.md}` 20px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 80px.
+- **Section padding:** 80px.
+
+### Grid & Container
+- Max content width: ~1200px.
+- Editorial body: 12-column grid.
+- Feature card grids: 2-up at desktop for splits, 3-up for benefits.
+- Footer: 5-column at desktop.
+
+### Whitespace Philosophy
+Generous editorial pacing — closer to a print magazine than a tech site. The cream canvas has plenty of breathing room; cards within bands sit close (16-24px gap).
+
+## Elevation & Depth
+
+The system uses **hairline-only depth**. No drop shadows, no elevation tiers. Cards float above the canvas via 1px hairlines and the slight white-on-cream contrast.
+
+| Level | Treatment | Use |
+|---|---|---|
+| Flat (canvas) | `{colors.canvas}` (#f7f7f4) | Body bands, footer |
+| Card | `{colors.surface-card}` (#ffffff) | Content cards |
+| Hairline border | 1px `{colors.hairline}` | Card outlines, dividers |
+| IDE pane | `{colors.canvas-soft}` (#fafaf7) | Inside IDE mockup cards |
+
+### Decorative Depth
+- **IDE-mockup cards** are the only "elevated" element. White card on cream canvas with internal pane structure mimicking the actual Cursor editor.
+- **Timeline pastel pills** add chromatic depth without surface elevation.
+
+## Shapes
+
+### Border Radius Scale
+
+| Token | Value | Use |
+|---|---|---|
+| `{rounded.none}` | 0px | Reserved |
+| `{rounded.xs}` | 4px | Inline tags |
+| `{rounded.sm}` | 6px | Compact rows |
+| `{rounded.md}` | 8px | CTA buttons, form inputs |
+| `{rounded.lg}` | 12px | Cards, IDE panes |
+| `{rounded.xl}` | 16px | Larger feature cards (rare) |
+| `{rounded.pill}` | 9999px | Timeline pills, badges |
+| `{rounded.full}` | 9999px | Avatars (rare) |
+
+## Components
+
+### Top Navigation
+
+**`top-nav`** — Background `{colors.canvas}`, text `{colors.ink}`, height 64px. Layout: Cursor wordmark left, primary horizontal menu (Pricing / Features / Enterprise / Blog / Forum / Careers), Sign In + Download primary CTA right.
+
+### Buttons
+
+**`button-primary`** — The signature Cursor Orange CTA. Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.button}` (14px / 500), padding 10px × 18px, height 40px, rounded `{rounded.md}` (8px).
+
+**`button-primary-active`** — Press state. Background `{colors.primary-active}`.
+
+**`button-secondary`** — White card pill on cream canvas. Background `{colors.surface-card}`, text `{colors.ink}`, 1px `{colors.hairline-strong}` border.
+
+**`button-tertiary-text`** — Inline ink text link.
+
+**`button-download`** — Larger ink-canvas CTA. Background `{colors.ink}`, text `{colors.canvas}`, padding 12px × 20px, height 44px. Used for "Download for macOS" type CTAs.
+
+### Hero & IDE Mockups
+
+**`hero-band`** — Background `{colors.canvas}`, full-width display headline in `{typography.display-mega}` (72px / 400 / -2.16px), subhead in `{typography.body-md}`, two CTAs (`button-download` + `button-tertiary-text`), and a centered IDE-mockup card below the hero copy.
+
+**`ide-mockup-card`** — A white card containing a multi-pane IDE mockup (sidebar + main editor + chat panel + terminal). Background `{colors.surface-card}`, rounded `{rounded.lg}` (12px), 1px `{colors.hairline}` border, no padding (panes fill the card edge-to-edge).
+
+**`ide-pane`** — Individual IDE pane inside the mockup. Background `{colors.canvas-soft}`, text `{colors.body}` in `{typography.code}` (JetBrains Mono 13px), rounded `{rounded.md}` (8px), padding 16px.
+
+### Cards
+
+**`feature-card`** — Background `{colors.surface-card}`, text `{colors.ink}`, type `{typography.title-md}`, rounded `{rounded.lg}`, padding 24px. 1px `{colors.hairline}` border.
+
+**`comparison-card`** — Side-by-side "Cursor vs other tools" card. Same surface and rounding; internally split into 2 columns.
+
+**`testimonial-card`** — Quote card. Background `{colors.surface-card}`, text `{colors.body}`, rounded `{rounded.lg}`, padding 24px.
+
+### AI Timeline (signature)
+
+**`timeline-pill-thinking`** — Peach pill. Background `{colors.timeline-thinking}`, text `{colors.ink}`, type `{typography.caption-uppercase}` (11px / 600 / 0.88px tracking, uppercase), rounded `{rounded.pill}`, padding 4px × 10px. Marks "Thinking" stage in product timeline.
+
+**`timeline-pill-grep`** — Mint pill. Same shape, background `{colors.timeline-grep}`. Marks "Grepping" stage.
+
+**`timeline-pill-read`** — Pastel-blue pill. Background `{colors.timeline-read}`. Marks "Reading" stage.
+
+**`timeline-pill-edit`** — Lavender pill. Background `{colors.timeline-edit}`. Marks "Editing" stage.
+
+**`timeline-pill-done`** — Gold pill. Background `{colors.timeline-done}`, text `{colors.on-primary}` white. Marks "Done" stage.
+
+### Code
+
+**`code-block`** — Inline code block. Background `{colors.surface-card}`, text `{colors.ink}` in `{typography.code}`, rounded `{rounded.lg}`, padding 20px, 1px `{colors.hairline}` border.
+
+### Pricing
+
+**`pricing-tier-card`** — Background `{colors.surface-card}`, rounded `{rounded.lg}`, padding 32px, 1px `{colors.hairline}` border.
+
+**`pricing-tier-featured`** — Featured tier inverts to ink. Background `{colors.ink}`, text `{colors.canvas}`. Same shape, dark inversion signals "highlighted" without colored ribbon.
+
+### Forms & Tags
+
+**`text-input`** — Background `{colors.surface-card}`, text `{colors.ink}`, rounded `{rounded.md}` (8px), padding 12px × 16px, height 44px.
+
+**`badge-pill`** — Small uppercase pill. Background `{colors.surface-strong}`, text `{colors.ink}`, type `{typography.caption-uppercase}`, rounded `{rounded.pill}`, padding 4px × 10px.
+
+### CTA / Footer
+
+**`cta-band`** — Pre-footer "Try Cursor now" band. Background `{colors.canvas}`, centered display headline in `{typography.display-lg}`, single Cursor Orange CTA. 96px vertical padding.
+
+**`footer`** — Closing footer. Background `{colors.canvas}`, text `{colors.body}`. 5-column link list. 64×48px padding.
+
+**`footer-link`** — Background transparent, text `{colors.body}`, type `{typography.body-sm}`.
+
+## Do's and Don'ts
+
+### Do
+- Reserve `{colors.primary}` (Cursor Orange) for primary CTAs and brand wordmark.
+- Keep display weight at 400. The editorial voice depends on this.
+- Use the cream `{colors.canvas}` page floor — never pure white.
+- Render every code surface (inline, blocks, IDE panes) in JetBrains Mono.
+- Use timeline pastels only inside in-product agent visualizations — never as system action colors.
+
+### Don't
+- Don't introduce a secondary brand action color. Cursor Orange is the only one.
+- Don't drop display to bold weights (700+). Magazine voice depends on 400.
+- Don't add drop shadows. Hairlines + ink-on-cream contrast carry the depth.
+- Don't use timeline pastels on non-timeline UI. They're scoped to the agent timeline only.
+- Don't extract a CTA color from a third-party widget (cookie consent, OneTrust). The brand's CTA is what appears on actual product CTAs.
+
+## Responsive Behavior
+
+### Breakpoints
+
+| Name | Width | Key Changes |
+|---|---|---|
+| Mobile | < 640px | Hero h1 72→32px; IDE mockup collapses to single pane preview; feature grid 1-up; nav hamburger. |
+| Tablet | 640–1024px | Hero h1 56px; IDE mockup compresses; feature grid 2-up. |
+| Desktop | 1024–1280px | Full hero h1 72px; full multi-pane IDE mockup; feature grid 3-up. |
+| Wide | > 1280px | Content caps at 1200px. |
+
+### Touch Targets
+- Primary CTA at 40px height — at WCAG AA, padded for AAA.
+- Download CTA at 44px — at AAA.
+
+### Collapsing Strategy
+- Top nav switches to hamburger below 768px.
+- IDE mockup multi-pane collapses to a single primary pane preview on mobile.
+- Feature grid: 3-up → 2-up → 1-up.
+
+## Iteration Guide
+
+1. Focus on a single component at a time.
+2. CTAs default to `{rounded.md}` (8px). Cards use `{rounded.lg}` (12px).
+3. Variants live as separate entries inside `components:`.
+4. Use `{token.refs}` everywhere — never inline hex.
+5. Hover state never documented.
+6. CursorGothic 400 for display, 400/500/600 for body. JetBrains Mono on every code surface.
+7. Cursor Orange stays scarce.
+8. Timeline pastels stay scoped to in-product agent visualizations.
+
+## Known Gaps
+
+- CursorGothic is a licensed typeface; Inter is the substitute.
+- Animation timings (timeline pill entrance, IDE pane reveal) out of scope.
+- In-app surfaces (code editor, chat panel, agent timeline) only partially captured via marketing IDE mockups.
+- Form validation states beyond focus not visible on captured surfaces.

@@ -1,40 +1,103 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.css");
 @import "tailwindcss";
 
+
 @theme {
-  --color-brand-bg: #0b0d16;
-  --color-brand-bg-light: #f4f5f8;
-  --color-brand-card: rgba(20, 24, 45, 0.65);
-  --color-brand-card-light: rgba(255, 255, 255, 0.75);
-  --color-brand-purple: #8b5cf6;
-  --color-brand-purple-hover: #7c3aed;
-  --color-brand-cyan: #06b6d4;
-  --color-brand-cyan-hover: #0891b2;
-  --color-brand-gmail: #ef4444;
-  --color-brand-naver: #10b981;
+  /* Cursor Design System Colors */
+  --color-cursor-primary: #f54e00;
+  --color-cursor-primary-active: #d04200;
+  --color-cursor-ink: var(--cursor-ink);
+  --color-cursor-body: var(--cursor-body);
+  --color-cursor-body-strong: var(--cursor-body-strong);
+  --color-cursor-muted: var(--cursor-muted);
+  --color-cursor-muted-soft: var(--cursor-muted-soft);
+  --color-cursor-hairline: var(--cursor-hairline);
+  --color-cursor-hairline-soft: var(--cursor-hairline-soft);
+  --color-cursor-hairline-strong: var(--cursor-hairline-strong);
+  --color-cursor-canvas: var(--cursor-canvas);
+  --color-cursor-canvas-soft: var(--cursor-canvas-soft);
+  --color-cursor-surface-card: var(--cursor-surface-card);
+  --color-cursor-surface-strong: var(--cursor-surface-strong);
+  --color-cursor-on-primary: #ffffff;
+  
+  --color-cursor-timeline-thinking: #dfa88f;
+  --color-cursor-timeline-grep: #9fc9a2;
+  --color-cursor-timeline-read: #9fbbe0;
+  --color-cursor-timeline-edit: #c0a8dd;
+  --color-cursor-timeline-done: #c08532;
+  
+  --color-cursor-semantic-error: #cf2d56;
+  --color-cursor-semantic-success: #1f8a65;
+
+  /* Backward Compatibility and Mappings */
+  --color-brand-bg: var(--cursor-canvas);
+  --color-brand-bg-light: var(--cursor-canvas-soft);
+  --color-brand-card: var(--cursor-surface-card);
+  --color-brand-card-light: var(--cursor-surface-card);
+  --color-brand-purple: #f54e00;
+  --color-brand-purple-hover: #d04200;
+  --color-brand-cyan: #dfa88f;
+  --color-brand-cyan-hover: #c08532;
+  --color-brand-gmail: #cf2d56;
+  --color-brand-naver: #1f8a65;
 }
 
 @layer base {
+  /* Default Light Theme (Cream & Soft aesthetics) */
+  html {
+    --cursor-ink: #26251e;
+    --cursor-body: #5a5852;
+    --cursor-body-strong: #26251e;
+    --cursor-muted: #807d72;
+    --cursor-muted-soft: #a09c92;
+    --cursor-hairline: #e6e5e0;
+    --cursor-hairline-soft: #efeee8;
+    --cursor-hairline-strong: #cfcdc4;
+    --cursor-canvas: #f7f7f4;
+    --cursor-canvas-soft: #fafaf7;
+    --cursor-surface-card: #ffffff;
+    --cursor-surface-strong: #e6e5e0;
+  }
+
+  /* Dark Theme (Minimalist Dark / Charcoal aesthetics) */
+  html.dark {
+    --cursor-ink: #ececed;
+    --cursor-body: #9a9a9f;
+    --cursor-body-strong: #ececed;
+    --cursor-muted: #6e6e73;
+    --cursor-muted-soft: #4b4b50;
+    --cursor-hairline: #222226;
+    --cursor-hairline-soft: #17171a;
+    --cursor-hairline-strong: #33333a;
+    --cursor-canvas: #09090b;
+    --cursor-canvas-soft: #101013;
+    --cursor-surface-card: #141416;
+    --cursor-surface-strong: #222226;
+  }
+
   body {
-    background-color: var(--color-brand-bg);
-    color: #e2e8f0;
-    font-family: 'Inter', sans-serif;
+    background-color: var(--color-cursor-canvas);
+    color: var(--color-cursor-body);
+    font-family: 'Pretendard Variable', 'Pretendard', 'Inter', system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 1.6;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     user-select: none;
     overflow: hidden;
     height: 100vh;
     width: 100vw;
-    background-image: 
-      radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 45%),
-      radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.04) 0%, transparent 45%);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    background-image: none;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
-  
-  body.light {
-    background-color: var(--color-brand-bg-light);
-    color: #1f2937;
-    background-image: 
-      radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.03) 0%, transparent 45%),
-      radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.03) 0%, transparent 45%);
+
+  .keep-all {
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
+
 
   html, #root {
     height: 100vh;
