@@ -19,18 +19,21 @@ import {
 } from 'lucide-react';
 import { useMailStore } from './store';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
+dayjs.locale('ko');
+
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import './App.css';
 
 // Mock stats for chart
 const statsData = [
-  { name: 'Mon', emails: 14 },
-  { name: 'Tue', emails: 28 },
-  { name: 'Wed', emails: 19 },
-  { name: 'Thu', emails: 34 },
-  { name: 'Fri', emails: 23 },
-  { name: 'Sat', emails: 8 },
-  { name: 'Sun', emails: 12 },
+  { name: '월', emails: 14 },
+  { name: '화', emails: 28 },
+  { name: '수', emails: 19 },
+  { name: '목', emails: 34 },
+  { name: '금', emails: 23 },
+  { name: '토', emails: 8 },
+  { name: '일', emails: 12 },
 ];
 
 function App() {
@@ -108,10 +111,10 @@ function App() {
         <header className="h-16 px-8 flex items-center justify-between border-b border-cursor-hairline bg-cursor-canvas">
           <div className="flex flex-col">
             <h1 className="text-lg font-semibold tracking-wide text-cursor-ink">
-              OmniMail Space
+              OmniMail 통합 메일함
             </h1>
             <span className="text-xs text-cursor-muted">
-              {dayjs().format('dddd, MMMM DD, YYYY')}
+              {dayjs().format('YYYY년 MM월 DD일 dddd')}
             </span>
           </div>
 
@@ -124,7 +127,7 @@ function App() {
             </button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cursor-surface-strong/50 border border-cursor-hairline text-xs font-medium text-cursor-ink">
               <span className="w-2 h-2 rounded-full bg-brand-naver animate-pulse" />
-              Naver Sync Active
+              네이버 실시간 동기화 중
             </div>
           </div>
         </header>
@@ -135,7 +138,7 @@ function App() {
             
             {/* Left Col: Account manager & Connection states */}
             <div className="md:col-span-1 flex flex-col gap-6">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-cursor-muted">Mailbox Providers</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-cursor-muted">이메일 계정 연동</h2>
               
               <div className="flex flex-col gap-4">
                 {accounts.map(acc => (
@@ -152,7 +155,7 @@ function App() {
                         <div>
                           <h3 className="font-medium text-sm text-cursor-ink">{acc.name}</h3>
                           <p className="text-xs text-cursor-muted">
-                            {acc.connected ? '🟢 Connected' : '🔴 Disconnected'}
+                            {acc.connected ? '🟢 연동 완료' : '🔴 연동 필요'}
                           </p>
                         </div>
                       </div>
@@ -188,10 +191,10 @@ function App() {
                 <div className="p-3 bg-cursor-primary/10 text-cursor-primary rounded-xl">
                   <Shield size={20} />
                 </div>
-                <div>
-                  <h4 className="text-sm font-medium text-cursor-ink">Browser Sandbox</h4>
+                <div className="keep-all">
+                  <h4 className="text-sm font-medium text-cursor-ink">안전한 로컬 샌드박스</h4>
                   <p className="text-xs text-cursor-muted mt-1 leading-relaxed">
-                    Credentials are read using active Chrome session cookies. Your email password is never stored or processed.
+                    사용자 인증 정보는 크롬 브라우저의 활성화된 로그인 세션 쿠키를 통해 안전하게 연동됩니다. 이메일 비밀번호는 시스템에 절대 저장되거나 외부로 전송되지 않습니다.
                   </p>
                 </div>
               </div>
@@ -210,7 +213,7 @@ function App() {
                     className="p-8 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex flex-col gap-6"
                   >
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-medium text-cursor-ink">Connect {accounts.find(a => a.id === connectingId)?.name}</h2>
+                      <h2 className="text-lg font-medium text-cursor-ink">{accounts.find(a => a.id === connectingId)?.name} 계정 연결</h2>
                       <button 
                         onClick={() => setConnectingId(null)}
                         className="p-2 text-cursor-muted hover:text-cursor-ink rounded-lg hover:bg-cursor-canvas-soft transition-all"
@@ -221,21 +224,21 @@ function App() {
 
                     <form onSubmit={submitConnection} className="flex flex-col gap-4">
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs text-cursor-muted font-medium uppercase tracking-wider">Email Address</label>
+                        <label className="text-xs text-cursor-muted font-medium uppercase tracking-wider">이메일 주소</label>
                         <input 
                           type="email" 
                           required
                           className="px-4 py-3 rounded-lg bg-cursor-canvas-soft border border-cursor-hairline focus:border-cursor-primary/50 text-sm text-cursor-ink focus:outline-none transition-all"
-                          placeholder="your.email@domain.com"
+                          placeholder={connectingId === 'naver' ? 'example@naver.com' : 'example@gmail.com'}
                           value={inputEmail}
                           onChange={(e) => setInputEmail(e.target.value)}
                         />
                       </div>
 
-                      <div className="p-4 rounded-lg bg-cursor-canvas-soft border border-cursor-hairline-soft text-xs text-cursor-muted flex items-start gap-3">
+                      <div className="p-4 rounded-lg bg-cursor-canvas-soft border border-cursor-hairline-soft text-xs text-cursor-muted flex items-start gap-3 keep-all">
                         <Lock size={16} className="text-cursor-primary shrink-0 mt-0.5" />
                         <span>
-                          For security, please ensure you are already logged in to the email provider in another browser tab.
+                          보안 및 원활한 연동을 위해, 브라우저의 다른 탭에서 해당 이메일 서비스(네이버 또는 구글)에 로그인되어 있는지 확인해 주세요.
                         </span>
                       </div>
 
@@ -243,15 +246,15 @@ function App() {
                         <button 
                           type="button"
                           onClick={() => setConnectingId(null)}
-                          className="px-5 py-2.5 rounded-lg border border-cursor-hairline-strong hover:bg-cursor-canvas-soft text-sm font-medium text-cursor-ink transition-all"
+                          className="px-5 py-2.5 rounded-lg border border-cursor-hairline-strong hover:bg-cursor-canvas-soft text-sm font-medium text-cursor-ink transition-all shrink-0 whitespace-nowrap"
                         >
-                          Cancel
+                          취소
                         </button>
                         <button 
                           type="submit"
-                          className="px-5 py-2.5 rounded-lg bg-cursor-primary hover:bg-cursor-primary-active text-white text-sm font-medium transition-all"
+                          className="px-5 py-2.5 rounded-lg bg-cursor-primary hover:bg-cursor-primary-active text-white text-sm font-medium transition-all shrink-0 whitespace-nowrap"
                         >
-                          Verify & Sync
+                          인증 및 동기화
                         </button>
                       </div>
                     </form>
@@ -267,19 +270,19 @@ function App() {
                   >
                     {/* Welcome Banner */}
                     <div className="p-8 rounded-xl border border-cursor-hairline bg-cursor-canvas-soft relative overflow-hidden">
-                      <div className="relative z-10">
-                        <h2 className="text-2xl font-semibold tracking-tight text-cursor-ink mb-2">Welcome to OmniMail Dashboard</h2>
+                      <div className="relative z-10 keep-all">
+                        <h2 className="text-2xl font-semibold tracking-tight text-cursor-ink mb-2">OmniMail 통합 메일 대시보드</h2>
                         <p className="text-sm text-cursor-body max-w-md leading-relaxed">
-                          Your email management space is ready. Connect Naver and Gmail in the sidebar to sync your incoming mails.
+                          이메일 통합 관리 공간이 준비되었습니다. 사이드바에서 네이버와 Gmail을 연동하여 수신 메일을 실시간으로 확인해 보세요.
                         </p>
                       </div>
                     </div>
 
                     {/* Stats Chart Card */}
                     <div className="p-6 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex flex-col gap-4">
-                      <div>
-                        <h3 className="text-xs font-semibold tracking-wider text-cursor-muted uppercase">Mail Flow Overview</h3>
-                        <p className="text-xs text-cursor-muted-soft">Weekly email delivery stats (Mock data visualization)</p>
+                      <div className="keep-all">
+                        <h3 className="text-xs font-semibold tracking-wider text-cursor-muted uppercase">이메일 수신 흐름 개요</h3>
+                        <p className="text-xs text-cursor-muted-soft">주간 이메일 유입 추이 (테스트 데이터)</p>
                       </div>
                       
                       <div className="h-48 w-100 mt-2">
