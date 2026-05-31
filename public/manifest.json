@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "OmniMail Dashboard",
+  "version": "1.0.0",
+  "description": "Premium unified email dashboard for Naver and Gmail.",
+  "permissions": [
+    "cookies",
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://mail.naver.com/*",
+    "https://m.mail.naver.com/*",
+    "https://mail.google.com/*",
+    "https://*.google.com/*"
+  ],
+  "action": {
+    "default_title": "Open OmniMail Dashboard"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
