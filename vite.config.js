@@ -9,6 +9,19 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        background: 'src/background.js'
+      },
+      output: {
+        entryFileNames: '[name].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom',

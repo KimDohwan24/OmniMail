@@ -79,29 +79,51 @@ describe('Zustand store - Mail account integration tests', () => {
     expect(naverAcc.email).toBe('');
   });
 
-  it('connectAccount를 호출하면 지정된 계정이 연동 상태로 전환되고 이메일 주소가 업데이트되어야 한다', () => {
+  it('connectAccount를 호출하면 지정된 계정이 연동 상태로 전환되고 이메일 주소가 업데이트되어야 한다 (비동기 실시간 검증 성공)', async () => {
     const { connectAccount } = useMailStore.getState();
     
-    // gmail 계정 연동 테스트
-    connectAccount('gmail', 'test.user@gmail.com');
+    // gmail 계정 연동 테스트 (Mock 환경에서는 test.user@gmail.com가 성공)
+    await connectAccount('gmail', 'test.user@gmail.com');
     let state = useMailStore.getState();
     let gmailAcc = state.accounts.find(acc => acc.id === 'gmail');
     expect(gmailAcc.connected).toBe(true);
     expect(gmailAcc.email).toBe('test.user@gmail.com');
+    expect(state.mismatchError).toBeNull();
 
-    // naver 계정 연동 테스트
-    connectAccount('naver', 'test.user@naver.com');
+    // naver 계정 연동 테스트 (Mock 환경에서는 test.user@naver.com가 성공)
+    await connectAccount('naver', 'test.user@naver.com');
     state = useMailStore.getState();
     const naverAcc = state.accounts.find(acc => acc.id === 'naver');
     expect(naverAcc.connected).toBe(true);
     expect(naverAcc.email).toBe('test.user@naver.com');
+    expect(state.mismatchError).toBeNull();
   });
 
-  it('disconnectAccount를 호출하면 지정된 계정의 연동 상태가 해제되고 이메일 주소가 초기화되어야 한다', () => {
+  it('올바르지 않은 도메인의 이메일 주소로 connectAccount를 호출하면 mismatchError가 설정되고 연동되지 않아야 한다', async () => {
+    const { connectAccount } = useMailStore.getState();
+    
+    // 지원하지 않는 도메인 연동 시도
+    await connectAccount('naver', 'test.user@daum.net');
+    let state = useMailStore.getState();
+    let naverAcc = state.accounts.find(acc => acc.id === 'naver');
+    expect(naverAcc.connected).toBe(false);
+    expect(state.mismatchError).not.toBeNull();
+    expect(state.mismatchError.type).toBe('invalid_domain');
+
+    // 계정 종류 불일치 (Naver 탭에 Gmail 메일 입력)
+    await connectAccount('naver', 'test.user@gmail.com');
+    state = useMailStore.getState();
+    naverAcc = state.accounts.find(acc => acc.id === 'naver');
+    expect(naverAcc.connected).toBe(false);
+    expect(state.mismatchError).not.toBeNull();
+    expect(state.mismatchError.type).toBe('invalid_domain');
+  });
+
+  it('disconnectAccount를 호출하면 지정된 계정의 연동 상태가 해제되고 이메일 주소가 초기화되어야 한다', async () => {
     const { connectAccount, disconnectAccount } = useMailStore.getState();
     
     // 먼저 연동 후 해제 테스트
-    connectAccount('gmail', 'test.user@gmail.com');
+    await connectAccount('gmail', 'test.user@gmail.com');
     disconnectAccount('gmail');
     
     const state = useMailStore.getState();
@@ -118,5 +140,23 @@ describe('Zustand store - Mail account integration tests', () => {
     
     const nextState = useMailStore.getState();
     expect(nextState.isHydrated).toBe(true);
+  });
+
+  it('detectSessions를 호출하면 Mock 환경에서 detectedSessions에 모킹 세션 정보가 등록되어야 한다', async () => {
+    const { detectSessions } = useMailStore.getState();
+    await detectSessions();
+    const state = useMailStore.getState();
+    expect(state.detectedSessions.naver).toBe('test.user@naver.com');
+    expect(state.detectedSessions.gmail).toBe('test.user@gmail.com');
+  });
+
+  it('hydrateSyncState를 호출하면 내부적으로 detectSessions를 실행하여 detectedSessions 상태를 초기화해야 한다', async () => {
+    const { hydrateSyncState } = useMailStore.getState();
+    useMailStore.setState({ detectedSessions: { naver: '', gmail: '' } });
+    
+    await hydrateSyncState();
+    const nextState = useMailStore.getState();
+    expect(nextState.detectedSessions.naver).toBe('test.user@naver.com');
+    expect(nextState.detectedSessions.gmail).toBe('test.user@gmail.com');
   });
 });

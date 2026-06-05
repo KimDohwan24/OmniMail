@@ -6,14 +6,17 @@
   "permissions": [
     "cookies",
     "storage",
-    "alarms"
+    "alarms",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback"
   ],
-  "host_permissions": [
+  "optional_host_permissions": [
     "*://*.naver.com/*",
     "*://mail.naver.com/*",
     "*://nid.naver.com/*",
     "*://mail.google.com/*",
-    "*://accounts.google.com/*"
+    "*://accounts.google.com/*",
+    "*://*.google.com/*"
   ],
   "background": {
     "service_worker": "background.js",

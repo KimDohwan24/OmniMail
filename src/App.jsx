@@ -11,15 +11,11 @@ import {
   Moon, 
   Inbox,
   Lock,
-  X,
-  Plus,
-  ShieldAlert,
-  ShieldCheck
+  ShieldAlert
 } from 'lucide-react';
 import { useMailStore } from './store';
 import { MailSidebar } from './features/mail-sidebar';
 import { MailList, SlideOverViewer } from './features/mail-viewer';
-import { detectAccountType } from './features/mail-sync/detectAccountType';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 dayjs.locale('ko');
@@ -46,6 +42,43 @@ const statsData = [
  * 2. 교차 검증 경고 피드백: mismatchError가 수신되면, 계정 믹스매치 방지를 위한 보안 알림을 출력합니다.
  * 3. 웜 크림 테마 & 1px Hairline: 독자적 디자인 규격을 흔들림 없이 유지합니다.
  */
+const PROVIDERS = {
+  naver: {
+    name: 'Naver Mail',
+    brandColor: '#03C75A',
+    glowColor: 'rgba(3, 199, 90, 0.15)',
+    bgGlow: 'shadow-[0_0_20px_rgba(3,199,90,0.12)]',
+    accentBorder: 'border-[#03C75A]/30',
+    loginUrl: 'https://nid.naver.com/nidlogin.login',
+    avatarBg: 'bg-[#03C75A]',
+    char: 'N'
+  },
+  gmail: {
+    name: 'Gmail',
+    brandColor: '#EA4335',
+    glowColor: 'rgba(234, 67, 53, 0.15)',
+    bgGlow: 'shadow-[0_0_20px_rgba(234,67,53,0.12)]',
+    accentBorder: 'border-[#EA4335]/30',
+    loginUrl: 'https://accounts.google.com/',
+    avatarBg: 'bg-[#EA4335]',
+    char: 'G'
+  }
+};
+
+const containerVariants = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+const cardVariants = {
+  initial: { y: 15, opacity: 0 },
+  animate: { y: 0, opacity: 1, transition: { duration: 0.4, ease: 'easeOut' } },
+  exit: { x: -40, opacity: 0, transition: { duration: 0.2 } }
+};
+
 function App() {
   const { 
     accounts, 
@@ -60,14 +93,50 @@ function App() {
     isSyncing,
     mismatchError,
     isHydrated,
-    hydrateSyncState
+    hydrateSyncState,
+    connectionError,
+    detectedSessions,
+    detectSessions,
+    hasHostPermissions,
+    sessionDebugLogs
   } = useMailStore();
 
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [inputEmail, setInputEmail] = useState('');
+  const handleRequestPermissions = () => {
+    if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.request) {
+      chrome.permissions.request({
+        origins: [
+          "*://*.naver.com/*",
+          "*://*.google.com/*"
+        ]
+      }, (granted) => {
+        if (granted) {
+          useMailStore.getState().checkHostPermissions().then(() => {
+            useMailStore.getState().detectSessions();
+          });
+        }
+      });
+    }
+  };
+
+  const [copied, setCopied] = useState(false);
+  const [showDebugLogs, setShowDebugLogs] = useState(false);
+
+  const handleCopyLogs = () => {
+    const logText = sessionDebugLogs.join('\n');
+    navigator.clipboard.writeText(logText).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
   const [activeTab, setActiveTab] = useState('overview');
 
   const [isInline, setIsInline] = useState(false);
+
+  const isExtensionEnv = typeof chrome !== 'undefined' && 
+                         chrome.runtime && 
+                         chrome.runtime.id && 
+                         window.location.protocol === 'chrome-extension:';
 
   // 앱 구동 시 최초 1회 메일 동기화 실행 및 화면 크기/포커스 감지 리스너 등록
   useEffect(() => {
@@ -85,9 +154,10 @@ function App() {
     handleResize();
     window.addEventListener('resize', handleResize);
 
-    // 창 포커스 진입 시 백그라운드 쿨다운 기반 동기화 구동 (PM 가이드라인에 따른 3분 방어)
+    // 창 포커스 진입 시 백그라운드 쿨다운 기반 동기화 구동 및 세션 리프레시
     const handleFocus = () => {
       fetchEmails(false);
+      detectSessions();
     };
     window.addEventListener('focus', handleFocus);
 
@@ -104,43 +174,7 @@ function App() {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [fetchEmails, setSelectedMail, hydrateSyncState]);
-
-  // 실시간 입력된 이메일 도메인 감지
-  const detectedProvider = detectAccountType(inputEmail);
-
-  const startConnection = () => {
-    setIsConnecting(true);
-    setInputEmail('');
-  };
-
-  const submitConnection = (e) => {
-    e.preventDefault();
-    if (!['gmail', 'naver'].includes(detectedProvider)) return;
-    
-    connectAccount(detectedProvider, inputEmail.trim());
-    setIsConnecting(false);
-    setInputEmail('');
-    
-    // 연동 완료 직후 세션 획득 및 교차 검증 실행
-    setTimeout(() => {
-      fetchEmails();
-    }, 150);
-  };
-
-  // 감지된 프로바이더에 따른 UI 스타일 바인딩 (UI/UX 톤다운 가이드라인 준수)
-  const getInputBorderStyle = () => {
-    switch (detectedProvider) {
-      case 'gmail':
-        return 'border-cursor-semantic-error/60 focus:border-cursor-semantic-error'; // 톤다운 레드
-      case 'naver':
-        return 'border-cursor-semantic-success/60 focus:border-cursor-semantic-success'; // 톤다운 그린
-      case 'unsupported':
-        return 'border-cursor-semantic-error focus:border-cursor-semantic-error';
-      default:
-        return 'border-cursor-hairline focus:border-cursor-primary/50';
-    }
-  };
+  }, [fetchEmails, setSelectedMail, hydrateSyncState, detectSessions]);
 
   if (!isHydrated) {
     return (
@@ -167,6 +201,48 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden font-sans text-cursor-body bg-cursor-canvas relative">
+      
+      {/* ---------------- 0단: 통신 차단 글래스모피즘 오버레이 ---------------- */}
+      <AnimatePresence>
+        {connectionError && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-zinc-950/60"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="p-8 max-w-md w-full rounded-2xl border border-cursor-hairline bg-cursor-surface-card flex flex-col items-center gap-5 text-center select-none shadow-2xl"
+            >
+              <div className="w-14 h-14 rounded-full bg-cursor-semantic-error/10 flex items-center justify-center text-cursor-semantic-error animate-pulse">
+                <ShieldAlert size={28} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <h3 className="font-semibold text-sm text-cursor-ink">
+                  OmniMail 서비스 일시 연결 지연
+                </h3>
+                <p className="text-xs text-cursor-muted leading-relaxed">
+                  브라우저 환경 변화 또는 업데이트로 인해 서비스 엔진과의 연결이 잠시 지연되고 있습니다.
+                  페이지를 새로고침하면 자동으로 안전하게 재연결됩니다.
+                </p>
+                <div className="text-[10px] text-cursor-muted/80 bg-cursor-canvas-soft border border-cursor-hairline p-2.5 rounded font-mono leading-relaxed mt-1 text-left">
+                  1단계: 아래 버튼을 눌러 페이지를 새로고침합니다.<br />
+                  2단계: 새로고침 후에도 연결이 안 될 경우, 브라우저 우측 상단 확장 프로그램 아이콘(퍼즐 모양) 클릭 후 OmniMail을 꺼짐 상태로 변경했다가 다시 켜주세요.
+                </div>
+              </div>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-2 bg-cursor-primary hover:bg-cursor-primary-active text-white rounded text-xs font-semibold shadow transition-all cursor-pointer"
+              >
+                대시보드 페이지 새로고침
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* ---------------- 1단: Slim Left Control Bar (64px) ---------------- */}
       <aside className="w-16 flex flex-col items-center py-6 justify-between border-r border-cursor-hairline bg-cursor-surface-strong/40 shrink-0">
@@ -305,191 +381,328 @@ function App() {
                                 </a>
                               </>
                             ) : (
-                              <>
-                                <div className="flex items-center gap-2 font-semibold">
-                                  <ShieldAlert size={16} />
-                                  <span>보안 경고: 계정 불일치</span>
-                                </div>
-                                <p className="leading-relaxed text-[11px] text-cursor-body">
-                                  입력하신 계정은 <strong>{mismatchError.expected}</strong> 이지만, 실제 브라우저에 로그인된 계정은 <strong>{mismatchError.actual}</strong> 입니다. 보안을 위해 연동이 차단되었습니다.
-                                </p>
-                              </>
+                              <div className="flex items-center gap-2 font-semibold">
+                                <ShieldAlert size={16} />
+                                <span>계정 정보 불일치</span>
+                              </div>
                             )}
                           </motion.div>
                         )}
-
+                        
+                        {/* 호스트 권한 경고/요청 배너 (Amber Soft Banner) */}
                         <AnimatePresence mode="wait">
-                          {isConnecting ? (
-                            // 1) 통합 도메인 추론 연동 폼
-                            <motion.div 
-                              key="connect-form"
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              className="p-5 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex flex-col gap-4"
+                          {!hasHostPermissions && (
+                            <motion.div
+                              variants={{
+                                initial: { opacity: 0, scale: 0.95, height: 0, overflow: 'hidden' },
+                                animate: { 
+                                  opacity: 1, 
+                                  scale: 1, 
+                                  height: 'auto', 
+                                  transition: { height: { duration: 0.2 }, opacity: { duration: 0.15 } }
+                                },
+                                exit: { 
+                                  opacity: 0, 
+                                  height: 0, 
+                                  paddingTop: 0, 
+                                  paddingBottom: 0,
+                                  marginTop: 0,
+                                  marginBottom: 0,
+                                  overflow: "hidden",
+                                  transition: { 
+                                    height: { duration: 0.25 }, 
+                                    opacity: { duration: 0.15 } 
+                                  }
+                                }
+                              }}
+                              initial="initial"
+                              animate="animate"
+                              exit="exit"
+                              className="p-3 bg-amber-500/10 text-amber-300 border border-amber-500/20 backdrop-blur-md rounded-xl flex flex-col gap-2.5 mb-4"
                             >
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-xs text-cursor-ink">
-                                  통합 이메일 계정 추가
-                                </h3>
-                                <button 
-                                  onClick={() => setIsConnecting(false)}
-                                  className="p-1 text-cursor-muted hover:text-cursor-ink rounded cursor-pointer"
-                                >
-                                  <X size={14} />
-                                </button>
-                              </div>
-
-                              <form onSubmit={submitConnection} className="flex flex-col gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                  <label className="text-[10px] text-cursor-muted font-semibold uppercase">이메일 주소</label>
-                                  
-                                  <div className="relative">
-                                    <input 
-                                      type="email" 
-                                      required
-                                      className={`w-full pl-3 pr-8 py-2 rounded bg-cursor-canvas border text-xs text-cursor-ink focus:outline-none transition-all ${getInputBorderStyle()}`}
-                                      placeholder="example@naver.com 또는 gmail.com"
-                                      value={inputEmail}
-                                      onChange={(e) => setInputEmail(e.target.value)}
-                                    />
-                                    {/* 도메인 매칭 시 브랜드 아이콘 동적 페이드인 연출 */}
-                                    <div className="absolute right-2.5 top-2.5 flex items-center justify-center">
-                                      {detectedProvider === 'gmail' && (
-                                        <span className="w-2.5 h-2.5 rounded-full bg-cursor-semantic-error animate-pulse" title="Gmail 감지됨" />
-                                      )}
-                                      {detectedProvider === 'naver' && (
-                                        <span className="w-2.5 h-2.5 rounded-full bg-cursor-semantic-success animate-pulse" title="Naver Mail 감지됨" />
-                                      )}
-                                    </div>
-                                  </div>
+                              <div className="flex items-start gap-2.5">
+                                <div className="p-1 bg-amber-500/10 text-amber-400 rounded-lg shrink-0 mt-0.5">
+                                  <ShieldAlert size={16} />
                                 </div>
-
-                                {/* Framer Motion을 활용한 도메인 분석 카드 가이드 동적 노출 */}
-                                <motion.div layout className="flex flex-col gap-2">
-                                  {detectedProvider === null && (
-                                    <p className="text-[10px] text-cursor-muted leading-relaxed">
-                                      이메일 주소를 입력하시면 도메인을 자동으로 감지하여 세션 연동 폼을 로드합니다.
-                                    </p>
-                                  )}
-                                  
-                                  {detectedProvider === 'unsupported' && (
-                                    <div className="p-3 rounded bg-cursor-semantic-error/5 border border-cursor-semantic-error/20 text-[10px] text-cursor-semantic-error leading-relaxed keep-all">
-                                      앗! 현재 OmniMail은 <strong>Naver Mail</strong>과 <strong>Gmail</strong> 계정만 연동을 제공합니다.
-                                    </div>
-                                  )}
-
-                                  {detectedProvider === 'gmail' && (
-                                    <motion.div 
-                                      initial={{ opacity: 0, height: 0 }}
-                                      animate={{ opacity: 1, height: 'auto' }}
-                                      className="p-3 rounded bg-cursor-canvas-soft border border-cursor-semantic-error/20 text-[10px] text-cursor-body flex flex-col gap-1.5 keep-all"
-                                    >
-                                      <div className="flex items-center gap-1.5 text-cursor-semantic-error font-semibold">
-                                        <ShieldCheck size={12} />
-                                        <span>Gmail 동기화 감지</span>
-                                      </div>
-                                      <p className="leading-relaxed text-cursor-muted">
-                                        브라우저에 로그인된 구글 세션 정보와 연동을 시작합니다. (최근 읽지 않은 메일 최대 20개 동기화 지원)
-                                      </p>
-                                    </motion.div>
-                                  )}
-
-                                  {detectedProvider === 'naver' && (
-                                    <motion.div 
-                                      initial={{ opacity: 0, height: 0 }}
-                                      animate={{ opacity: 1, height: 'auto' }}
-                                      className="p-3 rounded bg-cursor-canvas-soft border border-cursor-semantic-success/20 text-[10px] text-cursor-body flex flex-col gap-1.5 keep-all"
-                                    >
-                                      <div className="flex items-center gap-1.5 text-cursor-semantic-success font-semibold">
-                                        <ShieldCheck size={12} />
-                                        <span>네이버 메일 동기화 감지</span>
-                                      </div>
-                                      <p className="leading-relaxed text-cursor-muted">
-                                        브라우저에 로그인된 네이버 쿠키 세션 정보와 동기화를 개시합니다.
-                                      </p>
-                                    </motion.div>
-                                  )}
-                                </motion.div>
-
-                                <button 
-                                  type="submit"
-                                  disabled={!['gmail', 'naver'].includes(detectedProvider)}
-                                  className={`w-full py-2 text-xs font-semibold rounded transition-all ${
-                                    ['gmail', 'naver'].includes(detectedProvider)
-                                      ? 'bg-cursor-primary hover:bg-cursor-primary-active text-white cursor-pointer'
-                                      : 'bg-cursor-surface-strong text-cursor-muted-soft cursor-not-allowed'
-                                  }`}
-                                >
-                                  연동 및 실시간 동기화
-                                </button>
-                              </form>
-                            </motion.div>
-                          ) : (
-                            // 2) 일반 계정 리스트 & 보안 안내
-                            <motion.div 
-                              key="account-list"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              className="flex flex-col gap-5"
-                            >
-                              <div className="flex justify-between items-center mb-1">
-                                <h2 className="text-[10px] font-semibold uppercase tracking-wider text-cursor-muted">
-                                  연동 계정 설정
-                                </h2>
-                                <button
-                                  onClick={startConnection}
-                                  className="flex items-center gap-1 text-[10px] text-cursor-primary hover:text-cursor-primary-active font-semibold transition-all cursor-pointer"
-                                >
-                                  <Plus size={12} />
-                                  <span>계정 추가</span>
-                                </button>
-                              </div>
-
-                              <div className="flex flex-col gap-3">
-                                {accounts.map(acc => (
-                                  <div key={acc.id} className="p-3.5 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex items-center justify-between">
-                                    <div className="flex items-center gap-2.5">
-                                      <div className={`w-7 h-7 rounded ${acc.color} flex items-center justify-center text-white font-bold text-xs`}>
-                                        {acc.name.charAt(0)}
-                                      </div>
-                                      <div>
-                                        <h4 className="font-semibold text-xs text-cursor-ink">{acc.name}</h4>
-                                        <p className="text-[9px] text-cursor-muted mt-0.5 max-w-[130px] overflow-hidden text-ellipsis whitespace-nowrap font-mono">
-                                          {acc.connected ? acc.email : '연동 대기 중'}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    {acc.connected && (
-                                      <button 
-                                        onClick={() => disconnectAccount(acc.id)}
-                                        className="p-1.5 text-cursor-muted hover:text-cursor-primary rounded hover:bg-cursor-canvas-soft transition-all cursor-pointer"
-                                        title="연동 해제"
-                                      >
-                                        <LogOut size={14} />
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-
-                              {/* 보안 카드 */}
-                              <div className="p-4 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex items-start gap-3">
-                                <div className="p-2 bg-cursor-primary/10 text-cursor-primary rounded-lg shrink-0">
-                                  <Shield size={16} />
-                                </div>
-                                <div>
-                                  <h4 className="text-xs font-semibold text-cursor-ink">쿠키 보안 샌드박스</h4>
-                                  <p className="text-[10px] text-cursor-muted mt-1 leading-relaxed">
-                                    비밀번호를 절대 저장하지 않고, 샌드박스 내부 메모리에서만 로그인 쿠키를 이용해 요청한 뒤 안전하게 폐기합니다.
+                                <div className="flex flex-col gap-0.5">
+                                  <h4 className="text-xs font-bold text-amber-200">
+                                    세션 감지 권한 필요
+                                  </h4>
+                                  <p className="text-[10px] text-amber-300/80 leading-relaxed">
+                                    실시간 이메일 세션 감지를 위해 브라우저 연동 권한 승인이 필요합니다.
                                   </p>
                                 </div>
                               </div>
+                              
+                              <button
+                                onClick={handleRequestPermissions}
+                                className="w-full py-1.5 bg-amber-500 text-neutral-950 text-[10px] font-bold rounded-lg transition-all hover:bg-amber-400 cursor-pointer shadow-sm hover:shadow"
+                              >
+                                세션 권한 승인하기
+                              </button>
+                              
+                              <p className="text-[9px] text-amber-400/60 leading-normal text-center">
+                                ※ 보안 안내: OmniMail은 비밀번호를 저장하지 않으며, 백그라운드 세션 감지 목적으로만 이 권한을 사용합니다.
+                              </p>
                             </motion.div>
                           )}
                         </AnimatePresence>
+                        
+                        <div className="flex flex-col gap-5">
+                          <div className="flex justify-between items-center mb-1">
+                            <h2 className="text-[10px] font-semibold uppercase tracking-wider text-cursor-muted">
+                              연동 계정 설정
+                            </h2>
+                            {isSyncing && (
+                              <span className="text-[9px] text-cursor-primary animate-pulse font-mono font-semibold">
+                                세션 스캔 중...
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 4대 메일사 세션 원클릭 연동 리스트 (세로 한 줄 정렬) */}
+                          <motion.div 
+                            variants={containerVariants}
+                            initial="initial"
+                            animate="animate"
+                            className="flex flex-col gap-3"
+                          >
+                            <AnimatePresence mode="popLayout">
+                              {(() => {
+                                const visibleAccounts = accounts.filter(acc => {
+                                  const hasSession = detectedSessions && detectedSessions[acc.id];
+                                  const isErrorAccount = mismatchError && mismatchError.accountId === acc.id;
+                                  return acc.connected || hasSession || isErrorAccount;
+                                });
+
+                                if (visibleAccounts.length === 0) {
+                                  return (
+                                    <motion.div 
+                                      key="empty-sessions"
+                                      variants={cardVariants}
+                                      className="p-6 rounded-2xl border border-dashed border-white/5 bg-cursor-surface-card/10 flex flex-col items-center justify-center text-center gap-4 py-8 select-none"
+                                    >
+                                      <div className="p-3 bg-cursor-primary/10 text-cursor-primary rounded-2xl animate-pulse">
+                                        <Lock size={20} />
+                                      </div>
+                                      <div className="flex flex-col gap-1 max-w-[280px]">
+                                        <h4 className="text-xs font-bold text-cursor-ink">감지된 메일 세션이 없습니다</h4>
+                                        <p className="text-[10px] text-cursor-muted leading-relaxed">
+                                          브라우저에서 Naver 또는 Google에 로그인하면 실시간으로 감지되어 연동 리스트에 나타납니다.
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-2">
+                                        <a 
+                                          href="https://nid.naver.com/nidlogin.login"
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-500 text-[10px] font-bold rounded-lg transition-all hover:no-underline"
+                                        >
+                                          네이버 로그인
+                                        </a>
+                                        <a 
+                                          href="https://accounts.google.com/"
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-500 text-[10px] font-bold rounded-lg transition-all hover:no-underline"
+                                        >
+                                          구글 로그인
+                                        </a>
+                                      </div>
+                                    </motion.div>
+                                  );
+                                }
+
+                                return visibleAccounts.map(acc => {
+                                  const pInfo = PROVIDERS[acc.id] || PROVIDERS.naver;
+                                  const hasSession = detectedSessions && detectedSessions[acc.id];
+                                  
+                                  return (
+                                    <motion.div 
+                                      key={acc.id}
+                                      variants={cardVariants}
+                                      layout
+                                      className={`p-3 px-4 rounded-xl border backdrop-blur-xl transition-all duration-300 bg-cursor-surface-card/45 flex items-center justify-between gap-4 ${
+                                        acc.connected 
+                                          ? 'bg-emerald-500/[0.02]' 
+                                          : hasSession 
+                                            ? 'bg-cursor-surface-card/60' 
+                                            : 'opacity-65 bg-cursor-surface-card/20 hover:opacity-85'
+                                      }`}
+                                      style={{
+                                        borderColor: acc.connected 
+                                          ? 'rgba(16, 185, 129, 0.4)' 
+                                          : hasSession 
+                                            ? `${pInfo.brandColor}4D` 
+                                            : 'rgba(255, 255, 255, 0.06)',
+                                        boxShadow: acc.connected 
+                                          ? '0 0 15px rgba(16, 185, 129, 0.08)' 
+                                          : hasSession 
+                                            ? `0 0 15px ${pInfo.glowColor}` 
+                                            : 'none'
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-8 h-8 rounded-xl ${pInfo.avatarBg} flex items-center justify-center text-white font-black text-sm shadow-sm shrink-0`}>
+                                          {pInfo.char}
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                          <div className="flex items-center gap-1.5">
+                                            <h4 className="font-bold text-xs text-cursor-ink">{pInfo.name}</h4>
+                                            {!acc.connected && hasSession && (
+                                              <span className="text-[8px] px-1.5 py-0.2 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 font-bold tracking-wider shrink-0 uppercase animate-pulse rounded">
+                                                Detected
+                                              </span>
+                                            )}
+                                          </div>
+                                          <p className="text-[10px] text-cursor-muted mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap font-mono max-w-[150px] sm:max-w-[250px]" title={acc.connected ? acc.email : (hasSession ? detectedSessions[acc.id] : '')}>
+                                            {acc.connected 
+                                              ? acc.email 
+                                              : hasSession 
+                                                ? detectedSessions[acc.id]
+                                                : '세션 감지되지 않음'}
+                                          </p>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-3.5 shrink-0">
+                                        <span className="text-[9px] text-cursor-muted font-medium hidden sm:inline">
+                                          {acc.connected 
+                                            ? '연동 완료' 
+                                            : hasSession 
+                                              ? '연동 가능' 
+                                              : '로그인 필요'}
+                                        </span>
+                                        
+                                        <div className="flex items-center gap-1.5">
+                                          {acc.connected ? (
+                                            <button 
+                                              onClick={() => disconnectAccount(acc.id)}
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-500/20 text-red-500 hover:bg-red-500/10 transition-all text-[10px] font-semibold cursor-pointer"
+                                              title="연동 해제"
+                                            >
+                                              <LogOut size={10} />
+                                              <span>해제</span>
+                                            </button>
+                                          ) : hasSession ? (
+                                            <button 
+                                              onClick={async () => {
+                                                await connectAccount(acc.id, detectedSessions[acc.id]);
+                                                setTimeout(() => {
+                                                  fetchEmails(true);
+                                                }, 150);
+                                              }}
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all text-[10px] font-semibold cursor-pointer shadow-[0_2px_8px_rgba(16,185,129,0.2)]"
+                                              title="원클릭 연동 시작"
+                                            >
+                                              <LogIn size={10} />
+                                              <span>즉시 연동</span>
+                                            </button>
+                                          ) : (
+                                            <a 
+                                              href={pInfo.loginUrl}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cursor-surface-strong hover:bg-cursor-surface-strong/80 text-cursor-ink transition-all text-[10px] font-semibold hover:no-underline"
+                                              title="브라우저에서 로그인하기"
+                                            >
+                                              <Lock size={9} />
+                                              <span>로그인</span>
+                                            </a>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  );
+                                });
+                              })()}
+                            </AnimatePresence>
+                          </motion.div>
+
+                          {/* 🔧 연동 진단 로그 아코디언 */}
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => setShowDebugLogs(!showDebugLogs)}
+                              className="flex items-center justify-between px-3 py-2 rounded-lg border border-cursor-hairline bg-cursor-surface-card hover:bg-cursor-surface-strong/30 transition-all text-[10px] font-semibold text-cursor-muted cursor-pointer select-none"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span>🔧</span>
+                                <span>실시간 세션 연동 진단 로그</span>
+                              </div>
+                              <span className="text-[9px] transition-transform duration-200" style={{ transform: showDebugLogs ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                                ▶
+                              </span>
+                            </button>
+                            
+                            <AnimatePresence>
+                              {showDebugLogs && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                  animate={{ height: 'auto', opacity: 1, marginTop: 4 }}
+                                  exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                  className="overflow-hidden flex flex-col gap-2"
+                                >
+                                  <div className="relative p-3 bg-black/85 border border-white/5 rounded-xl flex flex-col gap-1.5 font-mono text-[10px] leading-relaxed text-[#A0A0A2] max-h-[160px] overflow-y-auto select-text">
+                                    <button
+                                      onClick={handleCopyLogs}
+                                      className="absolute top-2 right-2 p-1 bg-white/5 hover:bg-white/10 text-white rounded transition-all cursor-pointer text-[9px] font-sans font-bold flex items-center gap-1 border border-white/5 select-none"
+                                    >
+                                      {copied ? 'Copied!' : '복사'}
+                                    </button>
+                                    
+                                    {sessionDebugLogs.length === 0 ? (
+                                      <div className="text-cursor-muted italic text-center py-2 select-none">
+                                        스캔된 디버그 로그가 없습니다.
+                                      </div>
+                                    ) : (
+                                      sessionDebugLogs.map((log, idx) => (
+                                        <div 
+                                          key={idx} 
+                                          className={log.includes('Error') || log.includes('실패') ? 'text-red-400' : log.includes('성공') || log.includes('완료') ? 'text-emerald-400' : ''}
+                                        >
+                                          {log}
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+
+                          {/* 보안 카드 */}
+                          <div className="p-4 rounded-xl border border-cursor-hairline bg-cursor-surface-card flex items-start gap-3">
+                            <div className="p-2 bg-cursor-primary/10 text-cursor-primary rounded-lg shrink-0">
+                              <Shield size={16} />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-semibold text-cursor-ink">쿠키 보안 샌드박스</h4>
+                              <p className="text-[10px] text-cursor-muted mt-1 leading-relaxed">
+                                비밀번호를 절대 저장하지 않고, 샌드박스 내부 메모리에서만 로그인 쿠키를 이용해 요청한 뒤 안전하게 폐기합니다.
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* 개발 환경 오해 방지 안내 카드 */}
+                          {!isExtensionEnv && (
+                            <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 flex flex-col gap-2 text-xs text-amber-600 dark:text-amber-400 keep-all select-none">
+                              <div className="flex items-center gap-2 font-semibold">
+                                <ShieldAlert size={16} />
+                                <span>로컬 개발 서버 환경 경고</span>
+                              </div>
+                              <p className="leading-relaxed text-[10px] text-cursor-muted">
+                                현재 페이지는 로컬 웹서버(localhost)입니다. <strong>실제 브라우저 쿠키 연동</strong> 및 실시간 세션 감지는 크롬 확장 프로그램 내부 주소(chrome-extension://)에서만 작동합니다.
+                              </p>
+                              <div className="text-[9px] bg-cursor-canvas-soft border border-cursor-hairline p-2 rounded leading-relaxed text-cursor-muted font-mono mt-0.5">
+                                1. 빌드 수행: <code className="text-cursor-ink">npm run build</code><br />
+                                2. 크롬 메뉴 &gt; 확장 프로그램 관리 진입<br />
+                                3. <strong>'압축해제된 확장 프로그램을 로드'</strong> 클릭 후 <code className="text-cursor-ink">dist</code> 폴더 선택<br />
+                                4. 로드된 확장 앱의 대시보드를 열어 테스트해 주세요!
+                              </div>
+                            </div>
+                          )}
+                        </div>
 
                       </motion.div>
                     )}
