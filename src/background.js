@@ -138,7 +138,7 @@ async function runSilentSync() {
 /**
  * Naver/Nid 쿠키 통합 획득 및 DNR 동적 세션 규칙 설정 헬퍼 함수
  */
-async function setupNaverDNR(ruleId) {
+async function setupNaverDNR(ruleId, logs = []) {
   let cookieHeader = '';
   try {
     // 1. chrome.cookies API를 사용하여 naver.com 및 하위/연관 도메인 관련 쿠키들을 다각도로 획득합니다.
@@ -184,14 +184,20 @@ async function setupNaverDNR(ruleId) {
       }
 
       cookieHeader = cookieParts.join('; ');
+      const cookieNames = Array.from(cookieMap.keys()).join(', ');
       
-      console.log('[OmniMail Debug] 네이버 DNR 쿠키 정제 완료 - 총 개수:', cookieMap.size,
-                  '| 헤더 문자열 길이:', cookieHeader.length);
+      const debugMsg = `[Naver DNR] 쿠키 정제 완료 - 총 개수: ${cookieMap.size} | 목록: [${cookieNames}] | 길이: ${cookieHeader.length}`;
+      console.log(debugMsg);
+      logs.push(debugMsg);
     } else {
-      console.warn('[OmniMail Debug] 네이버 쿠키가 비어있습니다.');
+      const warnMsg = '[Naver DNR] 네이버 쿠키가 비어있습니다.';
+      console.warn(warnMsg);
+      logs.push(warnMsg);
     }
   } catch (cookieError) {
-    console.error('[OmniMail Debug] 네이버 쿠키 획득 실패:', cookieError);
+    const errMsg = `[Naver DNR] 네이버 쿠키 획득 실패: ${cookieError.message || cookieError}`;
+    console.error(errMsg);
+    logs.push(errMsg);
   }
 
   // declarativeNetRequest (DNR) 동적 세션 규칙 등록
@@ -232,7 +238,7 @@ async function setupNaverDNR(ruleId) {
 /**
  * Gmail 쿠키 획득 및 DNR 동적 세션 규칙 설정 헬퍼 함수
  */
-async function setupGmailDNR(ruleId) {
+async function setupGmailDNR(ruleId, logs = []) {
   let cookieHeader = '';
   try {
     // google.com 및 하위 세션 도메인을 순회하며 인증 쿠키를 획득합니다.
@@ -282,11 +288,20 @@ async function setupGmailDNR(ruleId) {
       }
 
       cookieHeader = cookieParts.join('; ');
-      console.log('[OmniMail Debug] Gmail DNR 쿠키 정제 완료 - 총 개수:', cookieMap.size,
-                  '| 헤더 문자열 길이:', cookieHeader.length);
+      const cookieNames = Array.from(cookieMap.keys()).join(', ');
+      
+      const debugMsg = `[Gmail DNR] 쿠키 정제 완료 - 총 개수: ${cookieMap.size} | 목록: [${cookieNames}] | 길이: ${cookieHeader.length}`;
+      console.log(debugMsg);
+      logs.push(debugMsg);
+    } else {
+      const warnMsg = '[Gmail DNR] 구글 쿠키가 비어있습니다.';
+      console.warn(warnMsg);
+      logs.push(warnMsg);
     }
   } catch (cookieError) {
-    console.error('[OmniMail Debug] 구글 쿠키 획득 실패:', cookieError);
+    const errMsg = `[Gmail DNR] 구글 쿠키 획득 실패: ${cookieError.message || cookieError}`;
+    console.error(errMsg);
+    logs.push(errMsg);
   }
 
   // declarativeNetRequest (DNR)를 통해 Cookie 및 Referer를 강제 주입합니다.
@@ -571,7 +586,7 @@ async function detectNaverSession(logs = []) {
   const ruleId = 10004;
   logs.push('[Naver] 세션 감지 시작...');
   try {
-    const cookieHeader = await setupNaverDNR(ruleId);
+    const cookieHeader = await setupNaverDNR(ruleId, logs);
     const cookieCount = cookieHeader ? cookieHeader.split(';').length : 0;
     logs.push(`[Naver] 쿠키 조회 완료 - 가져온 쿠키 개수: ${cookieCount}`);
     
@@ -631,7 +646,7 @@ async function detectGmailSession(logs = []) {
   const ruleId = 10005;
   logs.push('[Gmail] 세션 감지 시작...');
   try {
-    const cookieHeader = await setupGmailDNR(ruleId);
+    const cookieHeader = await setupGmailDNR(ruleId, logs);
     const cookieCount = cookieHeader ? cookieHeader.split(';').length : 0;
     logs.push(`[Gmail] 쿠키 조회 완료 - 가져온 쿠키 개수: ${cookieCount}`);
     
