@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { createSyncSlice } from './features/mail-sync/syncSlice';
+import { createClassifierSlice } from './features/mail-classifier/classifierSlice';
 
 // 테마를 body 태그 클래스 및 localStorage와 동기화하는 헬퍼 함수
 const syncTheme = (theme) => {
@@ -32,32 +34,23 @@ const getInitialTheme = () => {
 const initialTheme = getInitialTheme();
 syncTheme(initialTheme);
 
-export const useMailStore = create((set) => ({
-  // Accounts connection state
-  accounts: [
-    { id: 'gmail', name: 'Gmail', connected: false, email: '', color: 'bg-brand-gmail' },
-    { id: 'naver', name: 'Naver Mail', connected: false, email: '', color: 'bg-brand-naver' }
-  ],
-  
-  // Theme state: dark or light
+/**
+ * OmniMail 통합 상태 저장소 (useMailStore)
+ * 
+ * [학습 포인트]
+ * 1. 스프레드 연산자(...)를 이용해 독립된 슬라이스 스토어(Sync, Classifier)를 한데 모읍니다.
+ * 2. 이를 통해 컴포넌트 측에서는 useMailStore 단 하나의 훅만 바라보고 데이터를 자유롭게 공유할 수 있습니다.
+ */
+export const useMailStore = create((set, get) => ({
+  // 테마 상태 및 액션
   theme: initialTheme,
-  
-  // Actions
-  connectAccount: (id, email) => set((state) => ({
-    accounts: state.accounts.map(acc => 
-      acc.id === id ? { ...acc, connected: true, email } : acc
-    )
-  })),
-  
-  disconnectAccount: (id) => set((state) => ({
-    accounts: state.accounts.map(acc => 
-      acc.id === id ? { ...acc, connected: false, email: '' } : acc
-    )
-  })),
-  
   toggleTheme: () => set((state) => {
     const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
     syncTheme(nextTheme);
     return { theme: nextTheme };
-  })
+  }),
+
+  // 이메일 동기화 및 분류기 슬라이스 병합
+  ...createSyncSlice(set, get),
+  ...createClassifierSlice(set, get)
 }));

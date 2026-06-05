@@ -8,12 +8,12 @@ describe('Zustand store - Theme state tests', () => {
     localStorage.clear();
   });
 
-  it('기본 테마는 dark로 설정되어 있어야 한다용', () => {
+  it('기본 테마는 dark로 설정되어 있어야 한다', () => {
     const state = useMailStore.getState();
     expect(state.theme).toBe('dark');
   });
 
-  it('toggleTheme을 호출하면 theme 상태가 반전되어야 한다용 (dark -> light -> dark)', () => {
+  it('toggleTheme을 호출하면 theme 상태가 반전되어야 한다 (dark -> light -> dark)', () => {
     const { toggleTheme } = useMailStore.getState();
     
     // 테마 상태를 명시적으로 'dark'로 초기 세팅(필요시) 후 테스트
@@ -30,7 +30,7 @@ describe('Zustand store - Theme state tests', () => {
     expect(useMailStore.getState().theme).toBe('dark');
   });
 
-  it('theme 상태에 따라 document.documentElement의 classList가 동기화되어야 한다용', () => {
+  it('theme 상태에 따라 document.documentElement의 classList가 동기화되어야 한다', () => {
     const { toggleTheme } = useMailStore.getState();
     
     // 테마가 'light'일 때 html에는 'light' 클래스가 있고 'dark' 클래스는 없어야 함
@@ -46,7 +46,7 @@ describe('Zustand store - Theme state tests', () => {
     expect(document.documentElement.classList.contains('light')).toBe(false);
   });
 
-  it('테마 상태가 localStorage에 저장 및 로드되어야 한다용', () => {
+  it('테마 상태가 localStorage에 저장 및 로드되어야 한다', () => {
     const { toggleTheme } = useMailStore.getState();
     
     // 테마 토글 시 로컬스토리지 값 확인
@@ -79,35 +79,161 @@ describe('Zustand store - Mail account integration tests', () => {
     expect(naverAcc.email).toBe('');
   });
 
-  it('connectAccount를 호출하면 지정된 계정이 연동 상태로 전환되고 이메일 주소가 업데이트되어야 한다', () => {
+  it('connectAccount를 호출하면 지정된 계정이 연동 상태로 전환되고 이메일 주소가 업데이트되어야 한다 (비동기 실시간 검증 성공)', async () => {
     const { connectAccount } = useMailStore.getState();
     
-    // gmail 계정 연동 테스트
-    connectAccount('gmail', 'test.user@gmail.com');
+    // gmail 계정 연동 테스트 (Mock 환경에서는 test.user@gmail.com가 성공)
+    await connectAccount('gmail', 'test.user@gmail.com');
     let state = useMailStore.getState();
     let gmailAcc = state.accounts.find(acc => acc.id === 'gmail');
     expect(gmailAcc.connected).toBe(true);
     expect(gmailAcc.email).toBe('test.user@gmail.com');
+    expect(state.mismatchError).toBeNull();
 
-    // naver 계정 연동 테스트
-    connectAccount('naver', 'test.user@naver.com');
+    // naver 계정 연동 테스트 (Mock 환경에서는 test.user@naver.com가 성공)
+    await connectAccount('naver', 'test.user@naver.com');
     state = useMailStore.getState();
     const naverAcc = state.accounts.find(acc => acc.id === 'naver');
     expect(naverAcc.connected).toBe(true);
     expect(naverAcc.email).toBe('test.user@naver.com');
+    expect(state.mismatchError).toBeNull();
   });
 
-  it('disconnectAccount를 호출하면 지정된 계정의 연동 상태가 해제되고 이메일 주소가 초기화되어야 한다', () => {
+  it('올바르지 않은 도메인의 이메일 주소로 connectAccount를 호출하면 mismatchError가 설정되고 연동되지 않아야 한다', async () => {
+    const { connectAccount } = useMailStore.getState();
+    
+    // 지원하지 않는 도메인 연동 시도
+    await connectAccount('naver', 'test.user@daum.net');
+    let state = useMailStore.getState();
+    let naverAcc = state.accounts.find(acc => acc.id === 'naver');
+    expect(naverAcc.connected).toBe(false);
+    expect(state.mismatchError).not.toBeNull();
+    expect(state.mismatchError.type).toBe('invalid_domain');
+
+    // 계정 종류 불일치 (Naver 탭에 Gmail 메일 입력)
+    await connectAccount('naver', 'test.user@gmail.com');
+    state = useMailStore.getState();
+    naverAcc = state.accounts.find(acc => acc.id === 'naver');
+    expect(naverAcc.connected).toBe(false);
+    expect(state.mismatchError).not.toBeNull();
+    expect(state.mismatchError.type).toBe('invalid_domain');
+  });
+
+  it('disconnectAccount를 호출하면 지정된 계정의 연동 상태가 해제되고 이메일 주소가 초기화되어야 한다', async () => {
     const { connectAccount, disconnectAccount } = useMailStore.getState();
     
     // 먼저 연동 후 해제 테스트
-    connectAccount('gmail', 'test.user@gmail.com');
+    await connectAccount('gmail', 'test.user@gmail.com');
     disconnectAccount('gmail');
     
     const state = useMailStore.getState();
     const gmailAcc = state.accounts.find(acc => acc.id === 'gmail');
     expect(gmailAcc.connected).toBe(false);
     expect(gmailAcc.email).toBe('');
+  });
+
+  it('초기 스토어의 isHydrated는 false여야 하고, hydrateSyncState 호출 시 true로 업데이트되어야 한다', async () => {
+    const state = useMailStore.getState();
+    expect(state.isHydrated).toBe(false);
+
+    await state.hydrateSyncState();
+    
+    const nextState = useMailStore.getState();
+    expect(nextState.isHydrated).toBe(true);
+  });
+
+  it('detectSessions를 호출하면 Mock 환경에서 detectedSessions에 모킹 세션 정보가 등록되어야 한다', async () => {
+    const { detectSessions } = useMailStore.getState();
+    await detectSessions();
+    const state = useMailStore.getState();
+    expect(state.detectedSessions.naver).toBe('test.user@naver.com');
+    expect(state.detectedSessions.gmail).toBe('test.user@gmail.com');
+  });
+
+  it('hydrateSyncState를 호출하면 내부적으로 detectSessions를 실행하여 detectedSessions 상태를 초기화해야 한다', async () => {
+    const { hydrateSyncState } = useMailStore.getState();
+    useMailStore.setState({ detectedSessions: { naver: '', gmail: '' } });
+    
+    await hydrateSyncState();
+    const nextState = useMailStore.getState();
+    expect(nextState.detectedSessions.naver).toBe('test.user@naver.com');
+    expect(nextState.detectedSessions.gmail).toBe('test.user@gmail.com');
+  });
+});
+
+describe('Zustand store - Custom search keywords tests', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useMailStore.setState({
+      customKeywords: [],
+      selectedChannel: 'important',
+      selectedMail: null
+    });
+  });
+
+  it('addCustomKeyword를 호출하면 customKeywords 배열에 객체 형태로 추가되고 로컬 스토리지에 저장되어야 한다', async () => {
+    const { addCustomKeyword } = useMailStore.getState();
+    await addCustomKeyword('결제', 'subject');
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords).toContainEqual({ keyword: '결제', target: 'subject' });
+    
+    const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
+    expect(stored).toContainEqual({ keyword: '결제', target: 'subject' });
+  });
+
+  it('이미 존재하는 키워드를 addCustomKeyword하면 중복 추가되지 않아야 한다', async () => {
+    const { addCustomKeyword } = useMailStore.getState();
+    await addCustomKeyword('결제', 'subject');
+    await addCustomKeyword('결제', 'body');
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords.filter(k => k.keyword === '결제')).toHaveLength(1);
+    expect(state.customKeywords[0].target).toBe('subject');
+  });
+
+  it('removeCustomKeyword를 호출하면 customKeywords 배열에서 삭제되어야 하고, 선택 중인 채널이 해당 키워드였다면 important로 리셋되어야 한다', async () => {
+    const { addCustomKeyword, removeCustomKeyword, setSelectedChannel } = useMailStore.getState();
+    await addCustomKeyword('결제', 'subject');
+    await addCustomKeyword('공지', 'all');
+    
+    // 채널을 '결제'로 설정
+    setSelectedChannel('gmail', '결제');
+    expect(useMailStore.getState().selectedChannel).toBe('결제');
+
+    // '결제' 키워드 삭제
+    await removeCustomKeyword('결제');
+    const state = useMailStore.getState();
+    expect(state.customKeywords.some(k => k.keyword === '결제')).toBe(false);
+    expect(state.customKeywords.some(k => k.keyword === '공지')).toBe(true);
+    expect(state.selectedChannel).toBe('recent');
+
+    const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
+    expect(stored.some(k => k.keyword === '결제')).toBe(false);
+  });
+
+  it('hydrateSyncState 호출 시 로컬 스토리지의 구형 문자열 커스텀 키워드 정보를 객체 형태로 안전하게 마이그레이션 복구해야 한다', async () => {
+    localStorage.setItem('omnimail_custom_keywords', JSON.stringify(['정산', '출근']));
+    
+    const { hydrateSyncState } = useMailStore.getState();
+    await hydrateSyncState();
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords).toContainEqual({ keyword: '정산', target: 'all' });
+    expect(state.customKeywords).toContainEqual({ keyword: '출근', target: 'all' });
+
+    const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
+    expect(stored).toContainEqual({ keyword: '정산', target: 'all' });
+  });
+
+  it('hydrateSyncState 호출 시 로컬 스토리지의 신형 객체 커스텀 키워드 정보를 그대로 복구해야 한다', async () => {
+    localStorage.setItem('omnimail_custom_keywords', JSON.stringify([{ keyword: '정산', target: 'body' }]));
+    
+    const { hydrateSyncState } = useMailStore.getState();
+    await hydrateSyncState();
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords).toContainEqual({ keyword: '정산', target: 'body' });
   });
 });
 
