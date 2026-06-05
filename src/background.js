@@ -141,12 +141,18 @@ async function runSilentSync() {
 async function setupNaverDNR(ruleId) {
   let cookieHeader = '';
   try {
-    // 1. chrome.cookies API를 사용하여 naver.com 및 하위 도메인 관련 쿠키들을 획득합니다.
-    const cookies = await new Promise((resolve) => {
-      chrome.cookies.getAll({ domain: 'naver.com' }, (cookies) => {
-        resolve(cookies || []);
-      });
-    });
+    // 1. chrome.cookies API를 사용하여 naver.com 및 하위/연관 도메인 관련 쿠키들을 다각도로 획득합니다.
+    const domains = ['naver.com', '.naver.com', 'nid.naver.com', 'mail.naver.com'];
+    const cookiePromises = domains.map(dom => 
+      new Promise((resolve) => {
+        chrome.cookies.getAll({ domain: dom }, (cookies) => {
+          resolve(cookies || []);
+        });
+      })
+    );
+    const results = await Promise.all(cookiePromises);
+    const cookies = results.flat();
+
     if (cookies && cookies.length > 0) {
       const naverWhitelist = ['NID_AUT', 'NID_SES', 'NNB', 'NEO_SES'];
       const nowInSeconds = Date.now() / 1000;
@@ -206,7 +212,7 @@ async function setupNaverDNR(ruleId) {
           ]
         },
         condition: {
-          urlFilter: 'https://mail.naver.com/v2/api/*',
+          urlFilter: '*://mail.naver.com/v2/api/*',
           resourceTypes: ['xmlhttprequest', 'other']
         }
       }];
@@ -229,18 +235,17 @@ async function setupNaverDNR(ruleId) {
 async function setupGmailDNR(ruleId) {
   let cookieHeader = '';
   try {
-    // google.com 및 mail.google.com 하위의 세션 쿠키를 획득합니다.
-    const cookies1 = await new Promise((resolve) => {
-      chrome.cookies.getAll({ domain: 'google.com' }, (cookies) => {
-        resolve(cookies || []);
-      });
-    });
-    const cookies2 = await new Promise((resolve) => {
-      chrome.cookies.getAll({ domain: 'mail.google.com' }, (cookies) => {
-        resolve(cookies || []);
-      });
-    });
-    const cookies = [...cookies1, ...cookies2];
+    // google.com 및 하위 세션 도메인을 순회하며 인증 쿠키를 획득합니다.
+    const domains = ['google.com', '.google.com', 'mail.google.com', 'accounts.google.com'];
+    const cookiePromises = domains.map(dom => 
+      new Promise((resolve) => {
+        chrome.cookies.getAll({ domain: dom }, (cookies) => {
+          resolve(cookies || []);
+        });
+      })
+    );
+    const results = await Promise.all(cookiePromises);
+    const cookies = results.flat();
 
     if (cookies && cookies.length > 0) {
       // 구글 로그인 세션 유지에 필요한 핵심 인증 쿠키 및 보안 세션 쿠키 수집
@@ -302,7 +307,7 @@ async function setupGmailDNR(ruleId) {
           ]
         },
         condition: {
-          urlFilter: 'https://mail.google.com/mail/feed/atom*',
+          urlFilter: '*://mail.google.com/mail/feed/atom*',
           resourceTypes: ['xmlhttprequest', 'other']
         }
       }];
