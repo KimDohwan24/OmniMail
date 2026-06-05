@@ -171,30 +171,31 @@ describe('Zustand store - Custom search keywords tests', () => {
     });
   });
 
-  it('addCustomKeyword를 호출하면 customKeywords 배열에 추가되고 로컬 스토리지에 저장되어야 한다', async () => {
+  it('addCustomKeyword를 호출하면 customKeywords 배열에 객체 형태로 추가되고 로컬 스토리지에 저장되어야 한다', async () => {
     const { addCustomKeyword } = useMailStore.getState();
-    await addCustomKeyword('결제');
+    await addCustomKeyword('결제', 'subject');
     
     const state = useMailStore.getState();
-    expect(state.customKeywords).toContain('결제');
+    expect(state.customKeywords).toContainEqual({ keyword: '결제', target: 'subject' });
     
     const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
-    expect(stored).toContain('결제');
+    expect(stored).toContainEqual({ keyword: '결제', target: 'subject' });
   });
 
   it('이미 존재하는 키워드를 addCustomKeyword하면 중복 추가되지 않아야 한다', async () => {
     const { addCustomKeyword } = useMailStore.getState();
-    await addCustomKeyword('결제');
-    await addCustomKeyword('결제');
+    await addCustomKeyword('결제', 'subject');
+    await addCustomKeyword('결제', 'body');
     
     const state = useMailStore.getState();
-    expect(state.customKeywords.filter(k => k === '결제')).toHaveLength(1);
+    expect(state.customKeywords.filter(k => k.keyword === '결제')).toHaveLength(1);
+    expect(state.customKeywords[0].target).toBe('subject');
   });
 
   it('removeCustomKeyword를 호출하면 customKeywords 배열에서 삭제되어야 하고, 선택 중인 채널이 해당 키워드였다면 important로 리셋되어야 한다', async () => {
     const { addCustomKeyword, removeCustomKeyword, setSelectedChannel } = useMailStore.getState();
-    await addCustomKeyword('결제');
-    await addCustomKeyword('공지');
+    await addCustomKeyword('결제', 'subject');
+    await addCustomKeyword('공지', 'all');
     
     // 채널을 '결제'로 설정
     setSelectedChannel('gmail', '결제');
@@ -203,23 +204,36 @@ describe('Zustand store - Custom search keywords tests', () => {
     // '결제' 키워드 삭제
     await removeCustomKeyword('결제');
     const state = useMailStore.getState();
-    expect(state.customKeywords).not.toContain('결제');
-    expect(state.customKeywords).toContain('공지');
-    expect(state.selectedChannel).toBe('important'); // 리셋 검증
+    expect(state.customKeywords.some(k => k.keyword === '결제')).toBe(false);
+    expect(state.customKeywords.some(k => k.keyword === '공지')).toBe(true);
+    expect(state.selectedChannel).toBe('recent');
 
     const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
-    expect(stored).not.toContain('결제');
+    expect(stored.some(k => k.keyword === '결제')).toBe(false);
   });
 
-  it('hydrateSyncState 호출 시 로컬 스토리지의 커스텀 키워드 정보를 복구해야 한다', async () => {
+  it('hydrateSyncState 호출 시 로컬 스토리지의 구형 문자열 커스텀 키워드 정보를 객체 형태로 안전하게 마이그레이션 복구해야 한다', async () => {
     localStorage.setItem('omnimail_custom_keywords', JSON.stringify(['정산', '출근']));
     
     const { hydrateSyncState } = useMailStore.getState();
     await hydrateSyncState();
     
     const state = useMailStore.getState();
-    expect(state.customKeywords).toContain('정산');
-    expect(state.customKeywords).toContain('출근');
+    expect(state.customKeywords).toContainEqual({ keyword: '정산', target: 'all' });
+    expect(state.customKeywords).toContainEqual({ keyword: '출근', target: 'all' });
+
+    const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
+    expect(stored).toContainEqual({ keyword: '정산', target: 'all' });
+  });
+
+  it('hydrateSyncState 호출 시 로컬 스토리지의 신형 객체 커스텀 키워드 정보를 그대로 복구해야 한다', async () => {
+    localStorage.setItem('omnimail_custom_keywords', JSON.stringify([{ keyword: '정산', target: 'body' }]));
+    
+    const { hydrateSyncState } = useMailStore.getState();
+    await hydrateSyncState();
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords).toContainEqual({ keyword: '정산', target: 'body' });
   });
 });
 

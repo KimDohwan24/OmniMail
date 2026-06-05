@@ -95,7 +95,14 @@ export const createSyncSlice = (set, get) => ({
       // 커스텀 키워드 데이터 복구
       const persistedKeywords = await storageAdapter.getItem('omnimail_custom_keywords');
       if (persistedKeywords && Array.isArray(persistedKeywords)) {
-        set({ customKeywords: persistedKeywords });
+        const migrated = persistedKeywords.map(item => {
+          if (typeof item === 'string') {
+            return { keyword: item, target: 'all' };
+          }
+          return item;
+        });
+        set({ customKeywords: migrated });
+        await storageAdapter.setItem('omnimail_custom_keywords', migrated);
       }
       
       set({ isHydrated: true });
@@ -111,13 +118,13 @@ export const createSyncSlice = (set, get) => ({
     }
   },
 
-  addCustomKeyword: async (keyword) => {
+  addCustomKeyword: async (keyword, target = 'all') => {
     const clean = keyword.trim();
     if (!clean) return;
     const current = get().customKeywords;
-    if (current.includes(clean)) return;
+    if (current.some(k => k.keyword === clean)) return;
 
-    const nextKeywords = [...current, clean];
+    const nextKeywords = [...current, { keyword: clean, target }];
     set({ customKeywords: nextKeywords });
     await storageAdapter.setItem('omnimail_custom_keywords', nextKeywords);
     
@@ -127,13 +134,14 @@ export const createSyncSlice = (set, get) => ({
 
   removeCustomKeyword: async (keyword) => {
     const current = get().customKeywords;
-    const nextKeywords = current.filter(k => k !== keyword);
+    const nextKeywords = current.filter(k => k.keyword !== keyword);
     
     set((state) => {
       const isSelected = state.selectedChannel === keyword;
+      const defaultChannel = state.selectedAccountId === 'gmail' ? 'recent' : 'important';
       return {
         customKeywords: nextKeywords,
-        selectedChannel: isSelected ? 'important' : state.selectedChannel,
+        selectedChannel: isSelected ? defaultChannel : state.selectedChannel,
         selectedMail: state.selectedMail?.subject?.includes(keyword) ? null : state.selectedMail
       };
     });
@@ -423,10 +431,15 @@ export const createSyncSlice = (set, get) => ({
         acc.id === id ? { ...acc, connected: false, email: '' } : acc
       );
       storageAdapter.setItem('omnimail_accounts', nextAccounts);
+      
+      const nextAccountId = state.selectedAccountId === id ? 'naver' : state.selectedAccountId;
+      const nextChannel = state.selectedAccountId === id ? 'important' : state.selectedChannel;
+
       return {
         accounts: nextAccounts,
         emails: state.emails.filter(mail => mail.accountId !== id),
-        selectedAccountId: state.selectedAccountId === id ? 'naver' : state.selectedAccountId,
+        selectedAccountId: nextAccountId,
+        selectedChannel: nextChannel,
         selectedMail: state.selectedMail?.accountId === id ? null : state.selectedMail,
         mismatchError: state.mismatchError?.accountId === id ? null : state.mismatchError
       };
@@ -607,7 +620,8 @@ export const createSyncSlice = (set, get) => ({
           const keywords = get().customKeywords;
           if (gmailSuccess && keywords && keywords.length > 0) {
             try {
-              const searchPromises = keywords.map(async (kw) => {
+              const searchPromises = keywords.map(async (kwObj) => {
+                const kw = kwObj.keyword;
                 try {
                   const searchRes = await fetch(`https://mail.google.com/mail/feed/atom?q=${encodeURIComponent(kw)}`, {
                     method: 'GET',

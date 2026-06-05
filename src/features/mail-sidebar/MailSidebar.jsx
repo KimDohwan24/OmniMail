@@ -25,6 +25,8 @@ export function MailSidebar() {
     removeCustomKeyword
   } = useMailStore();
 
+  const [showAddForm, setShowAddForm] = useState(false);
+
   // 아코디언 상태 관리 (기본값: 둘 다 열어둠)
   const [openAccounts, setOpenAccounts] = useState({
     naver: true,
@@ -42,6 +44,10 @@ export function MailSidebar() {
   const getMailCount = (accountId, channel) => {
     const accountMails = emails.filter(mail => mail.accountId === accountId);
     
+    if (channel === 'recent') {
+      return accountMails.length;
+    }
+    
     if (channel === 'important' || channel === 'regular') {
       return accountMails.filter(mail => {
         const category = classifyEmail(mail, keywords, domains);
@@ -49,11 +55,17 @@ export function MailSidebar() {
       }).length;
     }
     
-    // 커스텀 키워드인 경우: 메일 제목이나 본문에서 단어 매칭
+    // 커스텀 키워드인 경우
+    const kwObj = customKeywords.find(k => k.keyword === channel);
+    const target = kwObj ? kwObj.target : 'all';
     const query = channel.toLowerCase();
+    
     return accountMails.filter(mail => {
       const subjectMatch = mail.subject?.toLowerCase().includes(query);
       const bodyMatch = mail.bodySnippet?.toLowerCase().includes(query);
+      
+      if (target === 'subject') return subjectMatch;
+      if (target === 'body') return bodyMatch;
       return subjectMatch || bodyMatch;
     }).length;
   };
@@ -107,41 +119,63 @@ export function MailSidebar() {
               {isConnected && isOpen && (
                 <div className="pl-6 flex flex-col gap-0.5 border-l border-cursor-hairline/60 ml-3.5 my-1">
                   
-                  {/* 중요 메일 채널 */}
-                  <button
-                    onClick={() => setSelectedChannel(acc.id, 'important')}
-                    className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-xs transition-all ${
-                      selectedAccountId === acc.id && selectedChannel === 'important'
-                        ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
-                        : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Inbox size={12} />
-                      <span>#important (중요)</span>
-                    </div>
-                    <span className="text-[10px] font-mono font-medium text-cursor-muted">
-                      {getMailCount(acc.id, 'important')}
-                    </span>
-                  </button>
+                  {acc.id === 'naver' ? (
+                    <>
+                      {/* 중요 메일 채널 */}
+                      <button
+                        onClick={() => setSelectedChannel(acc.id, 'important')}
+                        className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-xs transition-all ${
+                          selectedAccountId === acc.id && selectedChannel === 'important'
+                            ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
+                            : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Inbox size={12} />
+                          <span>#important (중요)</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-medium text-cursor-muted">
+                          {getMailCount(acc.id, 'important')}
+                        </span>
+                      </button>
 
-                  {/* 일반 메일 채널 */}
-                  <button
-                    onClick={() => setSelectedChannel(acc.id, 'regular')}
-                    className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-xs transition-all ${
-                      selectedAccountId === acc.id && selectedChannel === 'regular'
-                        ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
-                        : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Mail size={12} />
-                      <span>#regular (일반)</span>
-                    </div>
-                    <span className="text-[10px] font-mono font-medium text-cursor-muted">
-                      {getMailCount(acc.id, 'regular')}
-                    </span>
-                  </button>
+                      {/* 일반 메일 채널 */}
+                      <button
+                        onClick={() => setSelectedChannel(acc.id, 'regular')}
+                        className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-xs transition-all ${
+                          selectedAccountId === acc.id && selectedChannel === 'regular'
+                            ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
+                            : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Mail size={12} />
+                          <span>#regular (일반)</span>
+                        </div>
+                        <span className="text-[10px] font-mono font-medium text-cursor-muted">
+                          {getMailCount(acc.id, 'regular')}
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    /* Gmail: 최근 20개 메일 단일 탭 */
+                    <button
+                      onClick={() => setSelectedChannel(acc.id, 'recent')}
+                      className={`flex items-center justify-between py-1.5 px-2.5 rounded-md text-xs transition-all ${
+                        selectedAccountId === acc.id && selectedChannel === 'recent'
+                          ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
+                          : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Inbox size={12} />
+                        <span>#recent (최근 20개 메일)</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-medium text-cursor-muted">
+                        {getMailCount(acc.id, 'recent')}
+                      </span>
+                    </button>
+                  )}
 
                   {/* Gmail 계정일 때 커스텀 키워드 채널 및 추가 입력창 노출 */}
                   {acc.id === 'gmail' && (
@@ -149,66 +183,104 @@ export function MailSidebar() {
                       {/* 구분선 */}
                       <div className="h-[1px] bg-cursor-hairline/40 my-1.5 mx-1" />
                       
-                      {/* 커스텀 키워드 리스트 */}
-                      {customKeywords && customKeywords.map(kw => (
-                        <div
-                          key={kw}
-                          className={`flex items-center justify-between rounded-md text-xs group/kw relative ${
-                            selectedAccountId === acc.id && selectedChannel === kw
-                              ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
-                              : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
-                          }`}
+                      <div className="flex items-center justify-between px-2.5 py-1 text-[10px] font-semibold text-cursor-muted uppercase tracking-wider">
+                        <span>검색 키워드</span>
+                        <button
+                          onClick={() => setShowAddForm(prev => !prev)}
+                          className="hover:text-cursor-primary transition-all text-xs font-bold font-mono"
+                          title={showAddForm ? "검색바 접기" : "검색바 열기"}
                         >
-                          <button
-                            onClick={() => setSelectedChannel(acc.id, kw)}
-                            className="flex-1 flex items-center justify-between py-1.5 px-2.5 text-left"
+                          {showAddForm ? '[-] 접기' : '[+] 추가'}
+                        </button>
+                      </div>
+                      
+                      {/* 커스텀 키워드 리스트 */}
+                      {customKeywords && customKeywords.map(kwObj => {
+                        const kw = kwObj.keyword;
+                        const targetText = kwObj.target === 'subject' ? '제목' : kwObj.target === 'body' ? '내용' : '전체';
+                        return (
+                          <div
+                            key={kw}
+                            className={`flex items-center justify-between rounded-md text-xs group/kw relative ${
+                              selectedAccountId === acc.id && selectedChannel === kw
+                                ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
+                                : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
+                            }`}
                           >
-                            <span className="truncate">#{kw}</span>
-                            <span className="text-[10px] font-mono font-medium text-cursor-muted pr-5 group-hover/kw:pr-0 transition-all">
-                              {getMailCount(acc.id, kw)}
-                            </span>
-                          </button>
-                          
-                          {/* 삭제 버튼 */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeCustomKeyword(kw);
-                            }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/kw:opacity-100 hover:text-cursor-semantic-error p-0.5 rounded transition-all text-cursor-muted"
-                            title="키워드 삭제"
-                          >
-                            <span className="text-[11px] font-sans font-bold">×</span>
-                          </button>
-                        </div>
-                      ))}
+                            <button
+                              onClick={() => setSelectedChannel(acc.id, kw)}
+                              className="flex-1 flex items-center justify-between py-1.5 pl-2.5 pr-1 text-left min-w-0"
+                            >
+                              <span className="truncate flex items-center gap-1 min-w-0 flex-1">
+                                <span className="truncate">#{kw}</span>
+                                <span className="text-[9px] text-cursor-muted font-normal bg-cursor-canvas-soft/80 px-1 py-0.2 rounded border border-cursor-hairline/40 shrink-0">
+                                  {targetText}
+                                </span>
+                              </span>
+                              <span className="text-[10px] font-mono font-medium text-cursor-muted shrink-0 ml-2">
+                                {getMailCount(acc.id, kw)}
+                              </span>
+                            </button>
+                            
+                            {/* 삭제 버튼 전용 컨테이너 영역 (우측 정렬 및 여백 확보) */}
+                            <div className="w-6 shrink-0 flex items-center justify-center h-full">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeCustomKeyword(kw);
+                                }}
+                                className="opacity-0 group-hover/kw:opacity-100 hover:text-cursor-semantic-error p-0.5 rounded transition-all text-cursor-muted text-[11px] font-sans font-bold"
+                                title="키워드 삭제"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
 
                       {/* 키워드 추가 인풋 폼 */}
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const fd = new FormData(e.currentTarget);
-                          const val = fd.get('keyword')?.toString() || '';
-                          if (val.trim()) {
-                            addCustomKeyword(val.trim());
-                            e.currentTarget.reset();
-                          }
-                        }}
-                        className="mt-2 flex gap-1.5 px-1.5"
-                      >
-                        <input
-                          name="keyword"
-                          type="text"
-                          placeholder="새 단어 추가..."
-                          className="w-full bg-cursor-canvas-soft/80 border border-cursor-hairline/80 px-2 py-1 text-[11px] rounded outline-none text-cursor-ink placeholder-cursor-muted focus:border-cursor-primary/60 transition-all"
-                        />
-                        <button
-                          type="submit"
-                          className="px-2 py-1 text-[10px] font-semibold bg-cursor-surface-strong/60 hover:bg-cursor-surface-strong border border-cursor-hairline text-cursor-primary rounded transition-all shrink-0"
+                      {showAddForm && (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const fd = new FormData(e.currentTarget);
+                            const val = fd.get('keyword')?.toString() || '';
+                            const target = fd.get('target')?.toString() || 'all';
+                            if (val.trim()) {
+                              addCustomKeyword(val.trim(), target);
+                              e.currentTarget.reset();
+                            }
+                          }}
+                          className="mt-2 flex flex-col gap-1.5 px-1.5 border border-cursor-hairline/60 p-2 rounded-md bg-cursor-canvas-soft/40 animate-fadeIn"
                         >
-                          추가
-                        </button>
-                      </form>
+                          <div className="flex gap-1.5">
+                            <input
+                              name="keyword"
+                              type="text"
+                              placeholder="새 단어 추가..."
+                              className="w-full bg-cursor-canvas-soft/80 border border-cursor-hairline/80 px-2 py-1 text-[11px] rounded outline-none text-cursor-ink placeholder-cursor-muted focus:border-cursor-primary/60 transition-all"
+                            />
+                            <button
+                              type="submit"
+                              className="px-2 py-1 text-[10px] font-semibold bg-cursor-surface-strong/60 hover:bg-cursor-surface-strong border border-cursor-hairline text-cursor-primary rounded transition-all shrink-0"
+                            >
+                              추가
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-cursor-muted font-medium px-0.5">
+                            <span>검색 범위:</span>
+                            <select
+                              name="target"
+                              className="bg-cursor-canvas-soft border border-cursor-hairline px-1 py-0.5 text-[10px] rounded text-cursor-body outline-none"
+                            >
+                              <option value="all">제목+내용</option>
+                              <option value="subject">제목만</option>
+                              <option value="body">내용만</option>
+                            </select>
+                          </div>
+                        </form>
+                      )}
                     </>
                   )}
 

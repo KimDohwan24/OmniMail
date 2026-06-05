@@ -23,7 +23,8 @@ export function MailList() {
     setSelectedMail,
     fetchEmails,
     keywords,
-    domains
+    domains,
+    customKeywords
   } = useMailStore();
 
   // AI 타임라인 상태 ('idle' | 'thinking' | 'read' | 'grep' | 'done')
@@ -61,14 +62,22 @@ export function MailList() {
   // 필터링 적용된 메일 리스트 획득
   const filteredEmails = emails.filter(mail => {
     if (mail.accountId !== selectedAccountId) return false;
+    if (selectedChannel === 'recent') return true;
+    
     if (selectedChannel === 'important' || selectedChannel === 'regular') {
       const category = classifyEmail(mail, keywords, domains);
       return category === selectedChannel;
     }
-    // 커스텀 키워드인 경우: 메일 제목이나 본문에서 단어 매칭
+    // 커스텀 키워드인 경우: 설정된 검색 대상을 조회하여 매칭
+    const kwObj = customKeywords.find(k => k.keyword === selectedChannel);
+    const target = kwObj ? kwObj.target : 'all';
     const query = selectedChannel.toLowerCase();
+    
     const subjectMatch = mail.subject?.toLowerCase().includes(query);
     const bodyMatch = mail.bodySnippet?.toLowerCase().includes(query);
+    
+    if (target === 'subject') return subjectMatch;
+    if (target === 'body') return bodyMatch;
     return subjectMatch || bodyMatch;
   });
 

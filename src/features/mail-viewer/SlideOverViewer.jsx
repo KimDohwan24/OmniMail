@@ -25,13 +25,6 @@ if (typeof window !== 'undefined') {
 
 /**
  * SlideOverViewer Component
- * 
- * [학습 포인트]
- * 1. 2차 정밀 보안 살균: dangerouslySetInnerHTML를 통해 메일 본문을 HTML로 렌더링하기 직전에
- *    DOMPurify.sanitize를 수행하여 XSS 공격 스크립트를 완벽히 제거합니다. (Defense in Depth 최종 관문)
- *    - ADD_ATTR, ALLOWED_URI_REGEXP, FORBID_TAGS 설정을 융합해 링크 하이재킹 및 CSS Injection 차단.
- * 2. Framer Motion Slide-Over & Fade: inline 모드와 overlay 모드에 맞춰 최적의 애니메이션 전환을 분기합니다.
- * 3. 에디토리얼 테마: warm cream(#fafaf7) 캔버스와 1px hairline strong 테두리를 매칭했습니다.
  */
 export function SlideOverViewer({ email, onClose, isInline = false }) {
   if (!email) return null;
@@ -66,7 +59,7 @@ export function SlideOverViewer({ email, onClose, isInline = false }) {
       {...motionProps}
       className={containerClasses}
     >
-      {/* 1. 헤더 영역 (닫기 버튼과 툴바를 본문과 정렬) */}
+      {/* 1. 헤더 영역 */}
       <div className="border-b border-cursor-hairline bg-cursor-canvas-soft w-full shrink-0">
         <div className="max-w-[800px] mx-auto w-full px-6 py-4 flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-cursor-muted">
@@ -81,7 +74,7 @@ export function SlideOverViewer({ email, onClose, isInline = false }) {
         </div>
       </div>
 
-      {/* 2. 바디 영역 (정보 및 본문 - 와이드 여백 p-8 및 정렬 매칭) */}
+      {/* 2. 바디 영역 */}
       <div className="flex-1 overflow-y-auto p-8 w-full">
         <div className="max-w-[800px] mx-auto w-full flex flex-col gap-6">
           
