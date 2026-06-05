@@ -61,8 +61,15 @@ export function MailList() {
   // 필터링 적용된 메일 리스트 획득
   const filteredEmails = emails.filter(mail => {
     if (mail.accountId !== selectedAccountId) return false;
-    const category = classifyEmail(mail, keywords, domains);
-    return category === selectedChannel;
+    if (selectedChannel === 'important' || selectedChannel === 'regular') {
+      const category = classifyEmail(mail, keywords, domains);
+      return category === selectedChannel;
+    }
+    // 커스텀 키워드인 경우: 메일 제목이나 본문에서 단어 매칭
+    const query = selectedChannel.toLowerCase();
+    const subjectMatch = mail.subject?.toLowerCase().includes(query);
+    const bodyMatch = mail.bodySnippet?.toLowerCase().includes(query);
+    return subjectMatch || bodyMatch;
   });
 
   // 날짜 상대 표기 헬퍼 함수

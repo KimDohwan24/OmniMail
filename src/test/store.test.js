@@ -160,3 +160,66 @@ describe('Zustand store - Mail account integration tests', () => {
     expect(nextState.detectedSessions.gmail).toBe('test.user@gmail.com');
   });
 });
+
+describe('Zustand store - Custom search keywords tests', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useMailStore.setState({
+      customKeywords: [],
+      selectedChannel: 'important',
+      selectedMail: null
+    });
+  });
+
+  it('addCustomKeyword를 호출하면 customKeywords 배열에 추가되고 로컬 스토리지에 저장되어야 한다', async () => {
+    const { addCustomKeyword } = useMailStore.getState();
+    await addCustomKeyword('결제');
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords).toContain('결제');
+    
+    const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
+    expect(stored).toContain('결제');
+  });
+
+  it('이미 존재하는 키워드를 addCustomKeyword하면 중복 추가되지 않아야 한다', async () => {
+    const { addCustomKeyword } = useMailStore.getState();
+    await addCustomKeyword('결제');
+    await addCustomKeyword('결제');
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords.filter(k => k === '결제')).toHaveLength(1);
+  });
+
+  it('removeCustomKeyword를 호출하면 customKeywords 배열에서 삭제되어야 하고, 선택 중인 채널이 해당 키워드였다면 important로 리셋되어야 한다', async () => {
+    const { addCustomKeyword, removeCustomKeyword, setSelectedChannel } = useMailStore.getState();
+    await addCustomKeyword('결제');
+    await addCustomKeyword('공지');
+    
+    // 채널을 '결제'로 설정
+    setSelectedChannel('gmail', '결제');
+    expect(useMailStore.getState().selectedChannel).toBe('결제');
+
+    // '결제' 키워드 삭제
+    await removeCustomKeyword('결제');
+    const state = useMailStore.getState();
+    expect(state.customKeywords).not.toContain('결제');
+    expect(state.customKeywords).toContain('공지');
+    expect(state.selectedChannel).toBe('important'); // 리셋 검증
+
+    const stored = JSON.parse(localStorage.getItem('omnimail_custom_keywords'));
+    expect(stored).not.toContain('결제');
+  });
+
+  it('hydrateSyncState 호출 시 로컬 스토리지의 커스텀 키워드 정보를 복구해야 한다', async () => {
+    localStorage.setItem('omnimail_custom_keywords', JSON.stringify(['정산', '출근']));
+    
+    const { hydrateSyncState } = useMailStore.getState();
+    await hydrateSyncState();
+    
+    const state = useMailStore.getState();
+    expect(state.customKeywords).toContain('정산');
+    expect(state.customKeywords).toContain('출근');
+  });
+});
+

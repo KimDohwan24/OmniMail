@@ -218,8 +218,7 @@ async function setupNaverDNR(ruleId, logs = []) {
           ]
         },
         condition: {
-          urlFilter: '*://mail.naver.com/v2/api/*',
-          resourceTypes: ['xmlhttprequest', 'other']
+          urlFilter: 'https://mail.naver.com/v2/api/'
         }
       }];
 
@@ -322,8 +321,7 @@ async function setupGmailDNR(ruleId, logs = []) {
           ]
         },
         condition: {
-          urlFilter: '*://mail.google.com/mail/feed/atom*',
-          resourceTypes: ['xmlhttprequest', 'other']
+          urlFilter: 'https://mail.google.com/mail/feed/atom'
         }
       }];
 
@@ -364,7 +362,7 @@ async function syncNaverMail() {
     const initResponse = await fetch('https://mail.naver.com/v2/api/mail/init', {
       method: 'POST',
       headers: headers,
-      credentials: 'include',
+      credentials: 'omit',
       body: JSON.stringify({})
     });
     console.log('[OmniMail Debug] initData Response HTTP Status:', initResponse.status);
@@ -403,7 +401,7 @@ async function syncNaverMail() {
     const response = await fetch('https://mail.naver.com/v2/api/mail/list', {
       method: 'POST',
       headers: listHeaders,
-      credentials: 'include',
+      credentials: 'omit',
       body: JSON.stringify({
         page: 1,
         folderSn: 0,
@@ -465,7 +463,7 @@ async function executeVerify(accountId, email, sendResponse) {
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
+        credentials: 'omit',
         body: JSON.stringify({})
       });
       
@@ -497,7 +495,7 @@ async function executeVerify(accountId, email, sendResponse) {
       
       const response = await fetch('https://mail.google.com/mail/feed/atom', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'omit'
       });
       
       if (response.status === 401 || !response.ok) {
@@ -598,7 +596,7 @@ async function detectNaverSession(logs = []) {
       headers: {
         'Content-Type': 'application/json'
       },
-      credentials: 'include',
+      credentials: 'omit',
       body: JSON.stringify({})
     });
     
@@ -655,7 +653,7 @@ async function detectGmailSession(logs = []) {
     logs.push('[Gmail] API (feed/atom) Fetch 요청 전송 중...');
     const response = await fetch('https://mail.google.com/mail/feed/atom', {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'omit'
     });
     
     logs.push(`[Gmail] API Response HTTP Status: ${response.status}`);
@@ -709,7 +707,7 @@ async function syncGmailMail() {
 
     const response = await fetch('https://mail.google.com/mail/feed/atom', {
       method: 'GET',
-      credentials: 'include'
+      credentials: 'omit'
     });
     
     if (response.status === 401) {

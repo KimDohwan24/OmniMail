@@ -19,7 +19,10 @@ export function MailSidebar() {
     selectedChannel, 
     setSelectedChannel,
     keywords,
-    domains
+    domains,
+    customKeywords,
+    addCustomKeyword,
+    removeCustomKeyword
   } = useMailStore();
 
   // 아코디언 상태 관리 (기본값: 둘 다 열어둠)
@@ -39,9 +42,19 @@ export function MailSidebar() {
   const getMailCount = (accountId, channel) => {
     const accountMails = emails.filter(mail => mail.accountId === accountId);
     
+    if (channel === 'important' || channel === 'regular') {
+      return accountMails.filter(mail => {
+        const category = classifyEmail(mail, keywords, domains);
+        return category === channel;
+      }).length;
+    }
+    
+    // 커스텀 키워드인 경우: 메일 제목이나 본문에서 단어 매칭
+    const query = channel.toLowerCase();
     return accountMails.filter(mail => {
-      const category = classifyEmail(mail, keywords, domains);
-      return category === channel;
+      const subjectMatch = mail.subject?.toLowerCase().includes(query);
+      const bodyMatch = mail.bodySnippet?.toLowerCase().includes(query);
+      return subjectMatch || bodyMatch;
     }).length;
   };
 
@@ -129,6 +142,75 @@ export function MailSidebar() {
                       {getMailCount(acc.id, 'regular')}
                     </span>
                   </button>
+
+                  {/* Gmail 계정일 때 커스텀 키워드 채널 및 추가 입력창 노출 */}
+                  {acc.id === 'gmail' && (
+                    <>
+                      {/* 구분선 */}
+                      <div className="h-[1px] bg-cursor-hairline/40 my-1.5 mx-1" />
+                      
+                      {/* 커스텀 키워드 리스트 */}
+                      {customKeywords && customKeywords.map(kw => (
+                        <div
+                          key={kw}
+                          className={`flex items-center justify-between rounded-md text-xs group/kw relative ${
+                            selectedAccountId === acc.id && selectedChannel === kw
+                              ? 'bg-cursor-surface-strong/60 font-semibold text-cursor-primary'
+                              : 'text-cursor-body hover:text-cursor-ink hover:bg-cursor-canvas-soft'
+                          }`}
+                        >
+                          <button
+                            onClick={() => setSelectedChannel(acc.id, kw)}
+                            className="flex-1 flex items-center justify-between py-1.5 px-2.5 text-left"
+                          >
+                            <span className="truncate">#{kw}</span>
+                            <span className="text-[10px] font-mono font-medium text-cursor-muted pr-5 group-hover/kw:pr-0 transition-all">
+                              {getMailCount(acc.id, kw)}
+                            </span>
+                          </button>
+                          
+                          {/* 삭제 버튼 */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeCustomKeyword(kw);
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/kw:opacity-100 hover:text-cursor-semantic-error p-0.5 rounded transition-all text-cursor-muted"
+                            title="키워드 삭제"
+                          >
+                            <span className="text-[11px] font-sans font-bold">×</span>
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* 키워드 추가 인풋 폼 */}
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const fd = new FormData(e.currentTarget);
+                          const val = fd.get('keyword')?.toString() || '';
+                          if (val.trim()) {
+                            addCustomKeyword(val.trim());
+                            e.currentTarget.reset();
+                          }
+                        }}
+                        className="mt-2 flex gap-1.5 px-1.5"
+                      >
+                        <input
+                          name="keyword"
+                          type="text"
+                          placeholder="새 단어 추가..."
+                          className="w-full bg-cursor-canvas-soft/80 border border-cursor-hairline/80 px-2 py-1 text-[11px] rounded outline-none text-cursor-ink placeholder-cursor-muted focus:border-cursor-primary/60 transition-all"
+                        />
+                        <button
+                          type="submit"
+                          className="px-2 py-1 text-[10px] font-semibold bg-cursor-surface-strong/60 hover:bg-cursor-surface-strong border border-cursor-hairline text-cursor-primary rounded transition-all shrink-0"
+                        >
+                          추가
+                        </button>
+                      </form>
+                    </>
+                  )}
 
                 </div>
               )}

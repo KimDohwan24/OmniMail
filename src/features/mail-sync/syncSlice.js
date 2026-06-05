@@ -1,4 +1,5 @@
 import { detectAccountType } from './detectAccountType';
+import { parseGmailAtomFeed, parseNaverMails } from './syncService';
 
 /**
  * Mail Sync Store Slice (syncSlice.js)
@@ -51,6 +52,7 @@ const storageAdapter = {
   }
 };
 
+// 프론트엔드 직접 fetch에 필요한 모듈 로직 유지
 export const createSyncSlice = (set, get) => ({
   // 1. 상태 (State)
   accounts: [
@@ -64,7 +66,8 @@ export const createSyncSlice = (set, get) => ({
   connectionError: false, // 백그라운드 스크립트와의 연결 유실 여부
   hasHostPermissions: true, // 실시간 감지용 크롬 호스트 권한 획득 여부
   sessionDebugLogs: [], // 실시간 감지 상세 디버깅 로그
-
+  customKeywords: [],   // 지메일 커스텀 검색 키워드 목록
+  
   // UI 필터링 및 선택 상태
   selectedAccountId: 'naver', 
   selectedChannel: 'important', 
@@ -85,12 +88,17 @@ export const createSyncSlice = (set, get) => ({
               return { ...acc, connected: found.connected, email: found.email };
             }
             return acc;
-          }),
-          isHydrated: true
+          })
         }));
-      } else {
-        set({ isHydrated: true });
       }
+
+      // 커스텀 키워드 데이터 복구
+      const persistedKeywords = await storageAdapter.getItem('omnimail_custom_keywords');
+      if (persistedKeywords && Array.isArray(persistedKeywords)) {
+        set({ customKeywords: persistedKeywords });
+      }
+      
+      set({ isHydrated: true });
       
       // 호스트 권한 여부 선검사 후 세션 감지 자동 실행
       const hasPerm = await get().checkHostPermissions();
@@ -101,6 +109,38 @@ export const createSyncSlice = (set, get) => ({
       console.error('[OmniMail SyncStore] Hydration 중 오류 발생:', e);
       set({ isHydrated: true });
     }
+  },
+
+  addCustomKeyword: async (keyword) => {
+    const clean = keyword.trim();
+    if (!clean) return;
+    const current = get().customKeywords;
+    if (current.includes(clean)) return;
+
+    const nextKeywords = [...current, clean];
+    set({ customKeywords: nextKeywords });
+    await storageAdapter.setItem('omnimail_custom_keywords', nextKeywords);
+    
+    // 키워드가 추가되면 메일 데이터 즉시 새로고침
+    await get().fetchEmails(true);
+  },
+
+  removeCustomKeyword: async (keyword) => {
+    const current = get().customKeywords;
+    const nextKeywords = current.filter(k => k !== keyword);
+    
+    set((state) => {
+      const isSelected = state.selectedChannel === keyword;
+      return {
+        customKeywords: nextKeywords,
+        selectedChannel: isSelected ? 'important' : state.selectedChannel,
+        selectedMail: state.selectedMail?.subject?.includes(keyword) ? null : state.selectedMail
+      };
+    });
+    
+    await storageAdapter.setItem('omnimail_custom_keywords', nextKeywords);
+    // 키워드가 제거되면 메일 데이터 갱신
+    await get().fetchEmails(true);
   },
 
   checkHostPermissions: async () => {
@@ -132,34 +172,89 @@ export const createSyncSlice = (set, get) => ({
 
   detectSessions: async () => {
     const isExtensionEnv = typeof chrome !== 'undefined' && 
-                           chrome.runtime && 
-                           chrome.runtime.sendMessage && 
+                           chrome.cookies && 
+                           chrome.declarativeNetRequest && 
                            window.location.protocol === 'chrome-extension:';
     if (isExtensionEnv) {
-      try {
-        const response = await new Promise((resolve) => {
-          chrome.runtime.sendMessage({ action: 'DETECT_SESSIONS' }, (res) => {
-            const lastError = chrome.runtime.lastError;
-            if (lastError) {
-              resolve({ success: false, error: lastError.message });
-            } else {
-              resolve(res);
-            }
-          });
-        });
+      const logs = [];
+      logs.push('[Dashboard] 실시간 세션 스캔 시작...');
+      
+      let naverEmail = '';
+      let gmailEmail = '';
 
-        if (response && response.success && response.sessions) {
-          set({ 
-            detectedSessions: response.sessions,
-            sessionDebugLogs: response.debugLogs || []
-          });
-        } else if (response && response.debugLogs) {
-          set({ sessionDebugLogs: response.debugLogs });
+      // 1. 네이버 세션 감지
+      logs.push('[Naver] 세션 감지 시작...');
+      try {
+        logs.push('[Naver] API (v2/api/mail/init) Fetch 요청 전송 중 (credentials: include)...');
+        const initResponse = await fetch('https://mail.naver.com/v2/api/mail/init', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({})
+        });
+        
+        logs.push(`[Naver] API Response HTTP Status: ${initResponse.status}`);
+        if (initResponse.ok) {
+          const initText = await initResponse.text();
+          const firstChars = initText.substring(0, 50).trim();
+          logs.push(`[Naver] API 응답 데이터 수신 완료 (첫 50자: ${firstChars})`);
+          if (!initText.trim().startsWith('<')) {
+            const initData = JSON.parse(initText);
+            const email = initData.userEmail || initData.envInfo?.emailAddress || '';
+            if (email) {
+              logs.push(`[Naver] 세션 이메일 추출 성공: ${email.substring(0, 3)}***`);
+              naverEmail = email;
+            } else {
+              logs.push('[Naver] API 응답 내에 이메일 정보가 비어있습니다.');
+            }
+          } else {
+            logs.push('[Naver] API 응답이 HTML 형식(로그인 리다이렉션)입니다. 세션이 만료된 것으로 판단됩니다.');
+          }
+        } else {
+          logs.push(`[Naver] API 실패 - Status: ${initResponse.status}`);
         }
-      } catch (err) {
-        console.error('[OmniMail SyncStore] 세션 자동 감지 오류:', err);
-        set({ sessionDebugLogs: [`[Store Error] ${err.message || err}`] });
+      } catch (e) {
+        logs.push(`[Naver Error] 감지 과정 중 예외 발생: ${e.message || e}`);
       }
+
+      // 2. 지메일 세션 감지
+      logs.push('[Gmail] 세션 감지 시작...');
+      try {
+        logs.push('[Gmail] API (feed/atom) Fetch 요청 전송 중 (credentials: include)...');
+        const response = await fetch('https://mail.google.com/mail/feed/atom', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        logs.push(`[Gmail] API Response HTTP Status: ${response.status}`);
+        if (response.ok && response.status !== 401) {
+          const xmlText = await response.text();
+          const firstChars = xmlText.substring(0, 50).trim();
+          logs.push(`[Gmail] API 응답 데이터 수신 완료 (첫 50자: ${firstChars})`);
+          if (!xmlText.trim().startsWith('<html') && !xmlText.includes('Sign in')) {
+            const titleMatch = xmlText.match(/<title>Gmail - Inbox for (.*?)<\/title>/);
+            if (titleMatch && titleMatch[1]) {
+              const email = titleMatch[1].trim();
+              logs.push(`[Gmail] 세션 이메일 추출 성공: ${email.substring(0, 3)}***`);
+              gmailEmail = email;
+            } else {
+              logs.push('[Gmail] Atom Feed 응답 타이틀에서 이메일을 추출하지 못했습니다.');
+            }
+          } else {
+            logs.push('[Gmail] API 응답이 HTML(로그인 유도) 페이지입니다. 세션이 유효하지 않습니다.');
+          }
+        } else {
+          logs.push(`[Gmail] API 실패 - Status: ${response.status}`);
+        }
+      } catch (e) {
+        logs.push(`[Gmail Error] 감지 과정 중 예외 발생: ${e.message || e}`);
+      }
+
+      logs.push('[Dashboard] 실시간 세션 스캔 완료.');
+      set({
+        detectedSessions: { naver: naverEmail, gmail: gmailEmail },
+        sessionDebugLogs: logs
+      });
     } else {
       // Mock 환경 (Vite Dev Server, Vitest)
       set({
@@ -172,7 +267,7 @@ export const createSyncSlice = (set, get) => ({
   },
 
   connectAccount: async (id, email) => {
-    // 1차 형식 및 도메인 검증
+    // 1. 형식 검증
     const detectedType = detectAccountType(email);
     if (!detectedType || detectedType !== id) {
       set((state) => {
@@ -193,54 +288,83 @@ export const createSyncSlice = (set, get) => ({
     }
 
     const isExtensionEnv = typeof chrome !== 'undefined' && 
-                           chrome.runtime && 
-                           chrome.runtime.sendMessage && 
+                           chrome.cookies && 
+                           chrome.declarativeNetRequest && 
                            window.location.protocol === 'chrome-extension:';
 
     if (isExtensionEnv) {
       try {
         set({ isSyncing: true, mismatchError: null });
-        const response = await new Promise((resolve) => {
-          chrome.runtime.sendMessage({ action: 'VERIFY_ACCOUNT', accountId: id, email: email }, (res) => {
-            const lastError = chrome.runtime.lastError;
-            if (lastError) {
-              resolve({ success: false, error: lastError.message });
-            } else {
-              resolve(res);
-            }
-          });
-        });
+        let actualEmail = '';
 
-        if (response && response.success) {
-          set((state) => {
-            const nextAccounts = state.accounts.map(acc => 
-              acc.id === id ? { ...acc, connected: true, email } : acc
-            );
-            storageAdapter.setItem('omnimail_accounts', nextAccounts);
-            return {
-              accounts: nextAccounts,
-              mismatchError: null,
-              isSyncing: false
-            };
+        if (id === 'naver') {
+          const initResponse = await fetch('https://mail.naver.com/v2/api/mail/init', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({})
           });
-        } else {
-          set((state) => {
-            const nextAccounts = state.accounts.map(acc => 
-              acc.id === id ? { ...acc, connected: false, email: '' } : acc
-            );
-            storageAdapter.setItem('omnimail_accounts', nextAccounts);
-            return {
-              accounts: nextAccounts,
-              mismatchError: {
-                accountId: id,
-                type: 'session_mismatch',
-                message: response?.error || '로그인 세션이 일치하지 않거나 세션이 만료되었습니다.'
-              },
-              isSyncing: false
-            };
+
+          if (initResponse.ok) {
+            const initText = await initResponse.text();
+            if (!initText.trim().startsWith('<')) {
+              const initData = JSON.parse(initText);
+              actualEmail = initData.userEmail || initData.envInfo?.emailAddress || '';
+            }
+          }
+        } else if (id === 'gmail') {
+          const response = await fetch('https://mail.google.com/mail/feed/atom', {
+            method: 'GET',
+            credentials: 'include'
           });
+
+          if (response.ok && response.status !== 401) {
+            const xmlText = await response.text();
+            if (!xmlText.trim().startsWith('<html') && !xmlText.includes('Sign in')) {
+              const titleMatch = xmlText.match(/<title>Gmail - Inbox for (.*?)<\/title>/);
+              if (titleMatch && titleMatch[1]) {
+                actualEmail = titleMatch[1].trim();
+              }
+            }
+          }
         }
-      } catch {
+
+        if (actualEmail) {
+          if (actualEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
+            set((state) => {
+              const nextAccounts = state.accounts.map(acc => 
+                acc.id === id ? { ...acc, connected: false, email: '' } : acc
+              );
+              storageAdapter.setItem('omnimail_accounts', nextAccounts);
+              return {
+                accounts: nextAccounts,
+                mismatchError: {
+                  accountId: id,
+                  type: 'mismatch',
+                  expected: email,
+                  actual: actualEmail,
+                  message: `입력하신 이메일(${email})이 현재 브라우저에 로그인된 계정(${actualEmail})과 일치하지 않습니다.`
+                },
+                isSyncing: false
+              };
+            });
+          } else {
+            set((state) => {
+              const nextAccounts = state.accounts.map(acc => 
+                acc.id === id ? { ...acc, connected: true, email } : acc
+              );
+              storageAdapter.setItem('omnimail_accounts', nextAccounts);
+              return {
+                accounts: nextAccounts,
+                mismatchError: null,
+                isSyncing: false
+              };
+            });
+          }
+        } else {
+          throw new Error('로그인 세션을 찾을 수 없습니다. 브라우저에서 먼저 로그인을 진행해 주세요.');
+        }
+      } catch (error) {
         set((state) => {
           const nextAccounts = state.accounts.map(acc => 
             acc.id === id ? { ...acc, connected: false, email: '' } : acc
@@ -251,14 +375,14 @@ export const createSyncSlice = (set, get) => ({
             mismatchError: {
               accountId: id,
               type: 'verify_failed',
-              message: '실시간 세션 검증 중 에러가 발생했습니다.'
+              message: error.message || '실시간 세션 검증 중 에러가 발생했습니다.'
             },
             isSyncing: false
           };
         });
       }
     } else {
-      // 로컬 Vite Dev Server 또는 Vitest 테스트 환경 모킹
+      // Mock 환경
       const cleanEmail = email.toLowerCase().trim();
       const isMockSuccess = (id === 'naver' && cleanEmail === 'test.user@naver.com') ||
                             (id === 'gmail' && cleanEmail === 'test.user@gmail.com');
@@ -341,7 +465,6 @@ export const createSyncSlice = (set, get) => ({
 
   // 이메일 새로고침 액션 (하이브리드 지원 및 교차 검증 탑재)
   fetchEmails: async (force = false) => {
-    // [PM 가이드라인] 포커스 등 자동 새로고침 시 3분 쿨다운 방어 적용
     const now = Date.now();
     const lastSync = get().lastSyncTime;
     if (!force && lastSync && (now - lastSync < 180000)) {
@@ -350,139 +473,245 @@ export const createSyncSlice = (set, get) => ({
     }
 
     set({ isSyncing: true, mismatchError: null });
-    
-    // 크롬 확장 프로그램 런타임 환경인지 감지 (일반 웹 탭의 오감지 방지를 위해 프로토콜 검증 융합)
+
     const isExtensionEnv = typeof chrome !== 'undefined' && 
-                           chrome.runtime && 
-                           chrome.runtime.sendMessage && 
+                           chrome.cookies && 
+                           chrome.declarativeNetRequest && 
                            window.location.protocol === 'chrome-extension:';
 
     if (isExtensionEnv) {
       try {
-        // 재시도 메커니즘을 포함한 비동기 메시징 헬퍼 (MV3 서비스 워커 콜드 스타트 대응)
-        const sendMessageWithRetry = async (message, maxRetries = 3, delay = 150) => {
-          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        const currentAccounts = get().accounts;
+        let combinedMails = [];
+        let loginEmails = { naver: '', gmail: '' };
+
+        let hasMismatch = false;
+        let mismatchDetails = null;
+        let hasSessionExpired = false;
+        let expiredAccountId = null;
+
+        // 1. 네이버 메일 동기화 (연동 시에만)
+        const naverAcc = currentAccounts.find(a => a.id === 'naver');
+        if (naverAcc && naverAcc.connected) {
+          let naverEmail = '';
+          let tempKey = '';
+          let naverMails = [];
+          let naverSuccess = false;
+
+          try {
+            const initRes = await fetch('https://mail.naver.com/v2/api/mail/init', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({})
+            });
+
+            if (initRes.ok) {
+              const initText = await initRes.text();
+              if (!initText.trim().startsWith('<')) {
+                const initData = JSON.parse(initText);
+                naverEmail = initData.userEmail || initData.envInfo?.emailAddress || '';
+                tempKey = initData.tempKey || '';
+                naverSuccess = true;
+              }
+            }
+          } catch (e) {
+            console.error('[Naver Init Fetch Error]', e);
+          }
+
+          if (naverSuccess) {
+            const listHeaders = { 'Content-Type': 'application/json' };
+            if (tempKey) {
+              listHeaders['tempKey'] = tempKey;
+            }
+
             try {
-              return await new Promise((resolve, reject) => {
-                chrome.runtime.sendMessage(message, (res) => {
-                  const lastError = chrome.runtime.lastError;
-                  if (lastError) {
-                    reject(new Error(lastError.message));
-                  } else {
-                    resolve(res);
-                  }
-                });
+              const listRes = await fetch('https://mail.naver.com/v2/api/mail/list', {
+                method: 'POST',
+                headers: listHeaders,
+                credentials: 'include',
+                body: JSON.stringify({
+                  page: 1,
+                  folderSn: 0,
+                  sortField: 'receivedTime',
+                  sortType: 'desc',
+                  size: 30
+                })
               });
-            } catch (error) {
-              console.warn(`[OmniMail SyncStore] 메시지 송신 시도 ${attempt}/${maxRetries} 실패:`, error.message);
-              if (attempt === maxRetries) {
-                throw error;
-              }
-              await new Promise(resolve => setTimeout(resolve, delay * attempt));
-            }
-          }
-        };
 
-        const response = await sendMessageWithRetry({ action: 'REFRESH_MAILS' });
-        set({ connectionError: false }); // 연결 성공 시 통신 에러 해제
-
-        if (response && response.success) {
-          // [보안 조치] 계정 교차 검증 (Cross-Check) & 세션 만료 검증
-          let hasMismatch = false;
-          let mismatchDetails = null;
-          let hasSessionExpired = false;
-          let expiredAccountId = null;
-
-          const currentAccounts = get().accounts;
-          const nextAccounts = currentAccounts.map(acc => ({ ...acc }));
-
-          // 이번 동기화 응답에서 가져온 메일 목록 중 해당 계정의 메일이 존재하는지 확인하는 헬퍼
-          const hasMailsForAccount = (accId) => {
-            return response.emails && response.emails.some(mail => mail.accountId === accId);
-          };
-
-          for (let i = 0; i < nextAccounts.length; i++) {
-            const acc = nextAccounts[i];
-            if (acc.connected && response.loginEmails) {
-              const actualEmail = response.loginEmails[acc.id];
-              
-              if (!actualEmail) {
-                // [PM 이중 유효성 판정 정책]
-                // 이메일 주소(initData)를 가져오지 못했더라도, emails 목록에 해당 계정 메일이 존재한다면
-                // 임시 API 장애로 보고 세션 연결(connected)과 기존 이메일 주소를 유연하게 유지함.
-                const mailFetchSucceeded = hasMailsForAccount(acc.id);
-                if (mailFetchSucceeded) {
-                  console.warn(`[OmniMail SyncStore] ${acc.id} 프로필 조회는 실패했으나 메일 수신은 성공하여 세션 연동을 계속 유지합니다.`);
-                  nextAccounts[i].connected = true;
+              if (listRes.ok) {
+                const listText = await listRes.text();
+                if (!listText.trim().startsWith('<')) {
+                  const data = JSON.parse(listText);
+                  naverMails = parseNaverMails(data);
+                  combinedMails = [...combinedMails, ...naverMails];
+                  loginEmails.naver = naverEmail;
                 } else {
-                  // 메일 리스트 조회마저 실패하여 가져온 데이터가 없다면 최종 세션 만료로 판정
-                  hasSessionExpired = true;
-                  expiredAccountId = acc.id;
-                  nextAccounts[i].connected = false;
-                  nextAccounts[i].email = '';
+                  naverSuccess = false;
                 }
-              } else if (acc.email.toLowerCase().trim() !== actualEmail.toLowerCase().trim()) {
-                // 주소 정보가 일치하지 않는 경우 (보안 교차 검증 실패)
-                hasMismatch = true;
-                mismatchDetails = {
-                  accountId: acc.id,
-                  expected: acc.email,
-                  actual: actualEmail
-                };
-                nextAccounts[i].connected = false;
-                nextAccounts[i].email = '';
+              } else {
+                naverSuccess = false;
               }
+            } catch (e) {
+              console.error('[Naver List Fetch Error]', e);
+              naverSuccess = false;
             }
           }
 
-          if (hasSessionExpired && expiredAccountId) {
-            // 변경된 비활성화 계정 정보를 스토리지에 업데이트
-            storageAdapter.setItem('omnimail_accounts', nextAccounts);
-            set({
-              accounts: nextAccounts,
-              mismatchError: {
-                accountId: expiredAccountId,
-                type: 'session_expired',
-                message: `${expiredAccountId === 'naver' ? '네이버' : '구글'} 로그인 세션이 만료되었습니다. 다시 연동해 주세요.`
-              },
-              isSyncing: false
-            });
-            console.warn(`[OmniMail SyncStore] ${expiredAccountId} 세션 만료 감지.`);
-          } else if (hasMismatch && mismatchDetails) {
-            // 계정 불일치 시 스토리지에 업데이트
-            storageAdapter.setItem('omnimail_accounts', nextAccounts);
-            set({
-              accounts: nextAccounts,
-              mismatchError: {
-                accountId: mismatchDetails.accountId,
-                type: 'mismatch',
-                expected: mismatchDetails.expected,
-                actual: mismatchDetails.actual
-              },
-              isSyncing: false
-            });
-            console.error('[OmniMail SyncStore] 계정 교차 검증 불일치 감지:', mismatchDetails);
-          } else {
-            set({ emails: response.emails, isSyncing: false, mismatchError: null, lastSyncTime: Date.now() });
+          if (!naverSuccess) {
+            hasSessionExpired = true;
+            expiredAccountId = 'naver';
+          } else if (naverEmail && naverAcc.email.toLowerCase().trim() !== naverEmail.toLowerCase().trim()) {
+            hasMismatch = true;
+            mismatchDetails = {
+              accountId: 'naver',
+              expected: naverAcc.email,
+              actual: naverEmail
+            };
           }
+        }
+
+        // 2. 지메일 메일 동기화 (연동 시에만)
+        const gmailAcc = currentAccounts.find(a => a.id === 'gmail');
+        if (gmailAcc && gmailAcc.connected) {
+          let gmailEmail = '';
+          let gmailMails = [];
+          let gmailSuccess = false;
+
+          try {
+            const res = await fetch('https://mail.google.com/mail/feed/atom', {
+              method: 'GET',
+              credentials: 'include'
+            });
+
+            if (res.status === 401) {
+              gmailSuccess = false;
+            } else if (res.ok) {
+              const xmlText = await res.text();
+              if (!xmlText.trim().startsWith('<html') && !xmlText.includes('Sign in')) {
+                gmailMails = [...gmailMails, ...parseGmailAtomFeed(xmlText)];
+                gmailSuccess = true;
+
+                const titleMatch = xmlText.match(/<title>Gmail - Inbox for (.*?)<\/title>/);
+                if (titleMatch && titleMatch[1]) {
+                  gmailEmail = titleMatch[1].trim();
+                  loginEmails.gmail = gmailEmail;
+                }
+              }
+            }
+          } catch (e) {
+            console.error('[Gmail Fetch Error]', e);
+          }
+
+          // 커스텀 키워드 검색 피드 병렬 연동
+          const keywords = get().customKeywords;
+          if (gmailSuccess && keywords && keywords.length > 0) {
+            try {
+              const searchPromises = keywords.map(async (kw) => {
+                try {
+                  const searchRes = await fetch(`https://mail.google.com/mail/feed/atom?q=${encodeURIComponent(kw)}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                  });
+                  if (searchRes.ok) {
+                    const xml = await searchRes.text();
+                    if (!xml.trim().startsWith('<html') && !xml.includes('Sign in')) {
+                      return parseGmailAtomFeed(xml);
+                    }
+                  }
+                } catch (err) {
+                  console.error(`[Gmail Keyword Fetch Error for ${kw}]`, err);
+                }
+                return [];
+              });
+
+              const searchResults = await Promise.all(searchPromises);
+              searchResults.forEach(mails => {
+                gmailMails = [...gmailMails, ...mails];
+              });
+            } catch (searchErr) {
+              console.error('[Gmail Custom Keywords Fetch Error]', searchErr);
+            }
+          }
+
+          // ID 기준 중복 제거
+          const uniqueGmailMails = [];
+          const seenIds = new Set();
+          for (const m of gmailMails) {
+            if (!seenIds.has(m.id)) {
+              seenIds.add(m.id);
+              uniqueGmailMails.push(m);
+            }
+          }
+
+          if (gmailSuccess) {
+            combinedMails = [...combinedMails, ...uniqueGmailMails];
+          }
+
+          if (!gmailSuccess) {
+            hasSessionExpired = true;
+            expiredAccountId = 'gmail';
+          } else if (gmailEmail && gmailAcc.email.toLowerCase().trim() !== gmailEmail.toLowerCase().trim()) {
+            hasMismatch = true;
+            mismatchDetails = {
+              accountId: 'gmail',
+              expected: gmailAcc.email,
+              actual: gmailEmail
+            };
+          }
+        }
+
+        const nextAccounts = currentAccounts.map(acc => ({ ...acc }));
+
+        if (hasSessionExpired && expiredAccountId) {
+          const idx = nextAccounts.findIndex(a => a.id === expiredAccountId);
+          if (idx !== -1) {
+            nextAccounts[idx].connected = false;
+            nextAccounts[idx].email = '';
+          }
+          storageAdapter.setItem('omnimail_accounts', nextAccounts);
+          set({
+            accounts: nextAccounts,
+            mismatchError: {
+              accountId: expiredAccountId,
+              type: 'session_expired',
+              message: `${expiredAccountId === 'naver' ? '네이버' : '구글'} 로그인 세션이 만료되었습니다. 다시 연동해 주세요.`
+            },
+            isSyncing: false
+          });
+        } else if (hasMismatch && mismatchDetails) {
+          const idx = nextAccounts.findIndex(a => a.id === mismatchDetails.accountId);
+          if (idx !== -1) {
+            nextAccounts[idx].connected = false;
+            nextAccounts[idx].email = '';
+          }
+          storageAdapter.setItem('omnimail_accounts', nextAccounts);
+          set({
+            accounts: nextAccounts,
+            mismatchError: {
+              accountId: mismatchDetails.accountId,
+              type: 'mismatch',
+              expected: mismatchDetails.expected,
+              actual: mismatchDetails.actual
+            },
+            isSyncing: false
+          });
         } else {
-          console.error('[OmniMail SyncStore] 백그라운드 동기화 실패:', response?.error);
-          set({ isSyncing: false });
+          // 성공 수집된 이메일을 상태에 바인딩
+          set({
+            emails: combinedMails,
+            isSyncing: false,
+            mismatchError: null,
+            lastSyncTime: Date.now()
+          });
         }
       } catch (error) {
-        console.error('[OmniMail SyncStore] 메시지 송신 중 에러:', error);
-        
-        // 크롬 확장 포트 통신 단절(Could not establish connection)을 명시적으로 감지
-        if (error.message && (error.message.includes('Could not establish connection') || error.message.includes('Receiving end does not exist'))) {
-          set({ connectionError: true, isSyncing: false });
-        } else {
-          set({ isSyncing: false });
-        }
+        console.error('[OmniMail SyncStore] 직접 동기화 에러:', error);
+        set({ isSyncing: false });
       }
     } else {
-      // 로컬 Vite Dev Server 또는 Vitest 환경일 때는 가짜(Mock) 데이터 실행
+      // Mock 환경
       await new Promise(resolve => setTimeout(resolve, 800));
-
       const connectedAccounts = get().accounts.filter(acc => acc.connected);
       const mockEmails = [];
 
